@@ -1,4 +1,11 @@
-$Id: Changes,v 1.21 2004/04/20 17:59:06 jeff Exp $
+$Id: Changes,v 1.22 2004/09/16 20:17:42 jeff Exp $
+
+2.01	Thu Sep 16 16:16:18 EDT 2004
+	* New "reparse_subs" option enables reparsing of changed subroutines
+	* Removed distracting debugging output from ora_exception
+	* New upgrade script
+	* The filename argument for import_perl is now optional.  It will
+	  default to the name of the function with a ".pl" extension.
 
 2.00	Tue Apr 20 13:54:35 EDT 2004
 	* Added "new" method for creating new OCIDate objects

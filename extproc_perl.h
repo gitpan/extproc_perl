@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.h,v 1.17 2004/04/11 21:06:39 jeff Exp $ */
+/* $Id: extproc_perl.h,v 1.18 2004/05/05 17:07:03 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -46,6 +46,7 @@ struct ep_context {
 	char inc_path[4096];
 	char trusted_dir[MAXPATHLEN];
 	int ddl_format;
+	int reparse_subs;
 	int use_namespace;
 	int tainting;
 	int package_subs;
@@ -58,6 +59,7 @@ struct ep_code {
 	char label[255];
 	char plsql_spec[255];
 	char language[255];
+	int version;
 	char *code;
 	int code_len;
 };

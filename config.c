@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.16 2004/04/14 23:39:53 jeff Exp $ */
+/* $Id: config.c,v 1.17 2004/05/05 17:07:03 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +39,7 @@ int read_config(EP_CONTEXT *c, char *fn)
 		c->max_code_size = 32768;
 		c->max_sub_args = 32;
 		c->ddl_format = EP_DDL_FORMAT_STANDARD;
+		c->reparse_subs = 0;
 		return(1);
 	}
 	if (!(fp = fopen(fn, "r"))) {
@@ -118,6 +119,10 @@ int read_config(EP_CONTEXT *c, char *fn)
 		}
 		if (!strcmp(key, "enable_package_subs")) {
 			c->package_subs = YESORNO(val);
+			continue;
+		}
+		if (!strcmp(key, "reparse_subs")) {
+			c->reparse_subs = YESORNO(val);
 			continue;
 		}
 		if (!strcmp(key, "ddl_format")) {

@@ -1,4 +1,4 @@
--- $Id: ep_package.sql.in,v 1.10 2004/04/20 16:09:33 jeff Exp $
+-- $Id: ep_package.sql.in,v 1.11 2004/06/24 19:46:31 jeff Exp $
 
 -- create PERL_LIB library
 CREATE OR REPLACE LIBRARY PERL_LIB IS
@@ -34,7 +34,7 @@ AS
 	FUNCTION errno RETURN STRING;
 	FUNCTION errsv RETURN STRING;
 	PROCEDURE eval(code in VARCHAR2);
-	PROCEDURE import_perl(name in VARCHAR2, fname in VARCHAR2, proto in VARCHAR2 default NULL);
+	PROCEDURE import_perl(name in VARCHAR2, fname in VARCHAR2 default NULL, proto in VARCHAR2 default NULL);
 	PROCEDURE drop_perl(name in VARCHAR2);
 	PROCEDURE create_wrapper(proto in VARCHAR2);
 END Perl;

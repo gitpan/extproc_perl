@@ -1,22 +1,10 @@
-$Id: UPGRADE,v 1.6 2004/04/20 16:09:52 jeff Exp $
+$Id: UPGRADE,v 1.7 2004/05/05 17:21:50 jeff Exp $
 
-From 1.99_07 and earlier:
+From 2.00:
 
-The extproc_perl schema has changed.  Running @ep_schema from sqlplus will
-apply the changes to the views, but not to the code table.  Instead of dropping
-and adding the table and losing your code, run @migrate-1_99_07 from sqlplus,
-which will convert your code table.
+Run @ep_upgrade from sqlplus.
 
-From 1.99_06 and earlier:
+From pre-2.00:
 
-Build and install extproc_perl as usual.  There were numerous bug fixes in the
-C wrapper code for directly executed procedures, so you will need to recreate
-the wrappers using Perl.create_wrapper and relink using "make -f perlxsi.mk".
-
-From 1.03 and earlier:
-
-There is no direct upgrade path, but this should get you going.  Back up all
-your Perl source.  Install extproc_perl 2.0 using a different bootstrap file
-and a different name for the code table as you did for 1.03 (or use a different
-schema).  Update your code to work with changes to the ExtProc module and
-reimport your code.
+You must first upgrade to version 2.0, then you can upgrade to the current
+version.

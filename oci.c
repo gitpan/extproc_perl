@@ -1,4 +1,4 @@
-/* $Id: oci.c,v 1.11 2004/04/11 21:06:11 jeff Exp $ */
+/* $Id: oci.c,v 1.12 2004/05/04 20:33:31 jeff Exp $ */
 
 #include <oci.h>
 #include <EXTERN.h>
@@ -31,12 +31,125 @@ int ep_OCIExtProcGetEnv(EP_CONTEXT *c)
 	return(err);
 }
 
+/* fetch current subroutine version from database */
+/* returns -1 and throws an exception on error */
+/* returns 0 if version not available */
+/* returns positive version if found */
+int fetch_sub_version(EP_CONTEXT *c, char *name)
+{
+	char sql[255];
+	ocictx *this_ctxp = &(c->oci_context);
+	OCIDefine *def1 = (OCIDefine *) 0;
+	OCIBind *bind1 = (OCIBind *) 0;
+	OCIInd ind1;
+	int version, err;
+
+	EP_DEBUGF(c, "IN fetch_sub_version(%p, \"%s\")", c, name);
+
+	err = ep_OCIExtProcGetEnv(c);
+
+	if (err) {
+		ora_exception(c,"getenv");
+		return(-1);
+	}
+
+	snprintf(sql, 255, "select version from %s where name = :name", c->code_table);
+
+	err = OCIHandleAlloc(this_ctxp->envhp,
+		(dvoid **)&this_ctxp->stmtp,
+		OCI_HTYPE_STMT,
+		0,
+		0);
+
+	if (err) {
+		ora_exception(c,"handlealloc");
+		return(-1);
+	}
+
+	err = OCIStmtPrepare(this_ctxp->stmtp,
+		this_ctxp->errhp,
+		(text *) sql,
+		strlen(sql),
+		OCI_NTV_SYNTAX,
+		OCI_DEFAULT);
+
+	if (err) {
+		ora_exception(c,"prepare");
+		return(-1);
+	}
+
+	err = OCIDefineByPos(this_ctxp->stmtp,
+		&def1,
+		this_ctxp->errhp,
+		1,
+		&version,
+		sizeof(int),
+		SQLT_INT,
+		&ind1,
+		(dvoid *) 0,
+		(dvoid *) 0,
+		OCI_DEFAULT);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"define3");
+		return(-1);
+	}
+
+	err = OCIBindByPos(this_ctxp->stmtp,
+		&bind1,
+		this_ctxp->errhp,
+		1,
+		name,
+		strlen(name),
+		SQLT_CHR,
+		(dvoid *) 0,
+		(ub2 *) 0,
+		(ub2 *) 0,
+		(ub4) 0,
+		(ub4 *) 0,
+		OCI_DEFAULT);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"bind");
+		return(err);
+	}
+
+	err = OCIStmtExecute(this_ctxp->svchp,
+		this_ctxp->stmtp,
+		this_ctxp->errhp,
+		1,
+		0,
+		NULL,
+		NULL,
+		OCI_DEFAULT);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		/* don't throw an exception for a valid empty result */
+		if (err != OCI_NO_DATA) {
+			ora_exception(c,"exec");
+			return(-1);
+		}
+		OCIHandleFree(this_ctxp->stmtp, OCI_HTYPE_STMT);
+		return(0);
+	}
+
+	err = OCIHandleFree(this_ctxp->stmtp, OCI_HTYPE_STMT);
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"OCIHandleFree");
+		return(-1);
+	}
+
+	return(version);
+}
+
+
 int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 {
 	char sql[255], *buf;
 	ocictx *this_ctxp = &(c->oci_context);
 	OCIDefine *def1 = (OCIDefine *) 0;
 	OCIDefine *def2 = (OCIDefine *) 0;
+	OCIDefine *def3 = (OCIDefine *) 0;
 	OCIBind *bind1 = (OCIBind *) 0;
 	OCIInd ind1, ind2, ind3;
 	OCILobLocator *lobl;
@@ -52,7 +165,7 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		return(err);
 	}
 
-	snprintf(sql, 255, "select code, language from %s where name = :name", c->code_table);
+	snprintf(sql, 255, "select code, language, version from %s where name = :name", c->code_table);
 
 	err = OCIHandleAlloc(this_ctxp->envhp,
 		(dvoid **)&this_ctxp->stmtp,
@@ -119,6 +232,23 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		return(err);
 	}
 
+	err = OCIDefineByPos(this_ctxp->stmtp,
+		&def3,
+		this_ctxp->errhp,
+		3,
+		&(code->version),
+		sizeof(int),
+		SQLT_INT,
+		&ind3,
+		(dvoid *) 0,
+		(dvoid *) 0,
+		OCI_DEFAULT);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"define3");
+		return(err);
+	}
+
 	err = OCIBindByPos(this_ctxp->stmtp,
 		&bind1,
 		this_ctxp->errhp,
@@ -162,6 +292,7 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		return(err);
 	}
 
+	/* XXX - IS THIS USED ANYMORE??? */
 	/* if code is NULL, this is a stub -- code is in bootstrap file */
 	if (ind1 == OCI_IND_NULL) {
 		EP_DEBUG(c, "code is NULL -- will check symbol table for CV");

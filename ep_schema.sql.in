@@ -1,10 +1,11 @@
--- $Id: ep_schema.sql.in,v 1.15 2004/04/12 15:35:50 jeff Exp $
+-- $Id: ep_schema.sql.in,v 1.16 2004/05/05 17:07:03 jeff Exp $
 
 -- create code table
 CREATE TABLE -CODETABLE- (
 	name VARCHAR2(255) primary key,
 	plsql_spec VARCHAR2(255),
 	language VARCHAR2(16),
+	version NUMBER(11),
 	code CLOB
 );
 
@@ -21,7 +22,8 @@ CREATE OR REPLACE VIEW perl_config AS (
 		Perl.config('tainting') as TAINTING,
 		Perl.config('session_namespace') as SESSION_NAMESPACE,
 		Perl.config('package_subs') as PACKAGE_SUBS,
-		Perl.config('ddl_format') as DDL_FORMAT
+		Perl.config('ddl_format') as DDL_FORMAT,
+		Perl.config('reparse_subs') as REPARSE_SUBS
 	from dual
 );
 

@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.40 2004/04/20 18:33:32 jeff Exp $
+# $Id: Code.pm,v 1.44 2004/09/16 20:17:42 jeff Exp $
 
 package ExtProc::Code;
 
@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '2.00';
+our $VERSION = '2.01';
 
 use ExtProc qw(ep_debug put_line);
 use File::Spec;
@@ -617,8 +617,8 @@ sub import_code
 		return;
 	}
 
-	if ($name eq '' || $file eq '') {
-		ExtProc::ora_exception('import_code: empty subroutine name or filename');
+	if ($name eq '') {
+		ExtProc::ora_exception('import_code: empty subroutine name');
 		return;
 	}
 
@@ -632,6 +632,9 @@ sub import_code
 	}
 	if ($file =~ /^([\w\.\-\_]+)$/) {
 		$file = $1;
+	}
+	elsif (!defined($file)) {
+		$file = "${name}.pl";
 	}
 	else {
 		ExtProc::ora_exception('illegal characters in filename');
@@ -658,9 +661,16 @@ sub import_code
 	}
 	close(CODE);
 
-	# delete existing code if it exists
+	# get current version number, if any
 	my $dbh = ExtProc->dbi_connect;
-	my $sth = $dbh->prepare("delete from $table where name = ?");
+	my $sth = $dbh->prepare("select nvl(version, 0) from $table where name = ?");
+	$sth->execute($name);
+	ExtProc::ep_debug("rows=".$sth->rows);
+	my $version = ($sth->fetchrow_array)[0];
+	$sth->finish;
+
+	# delete existing code if it exists
+	$sth = $dbh->prepare("delete from $table where name = ?");
 	$sth->execute($name);
 	$sth->finish;
 
@@ -669,9 +679,9 @@ sub import_code
 		$proto = $1;
 	}
 
-	# import code into database
-	$sth = $dbh->prepare("insert into $table (name, plsql_spec, language, code) values(?, ?, 'Perl5', ?)");
-	$sth->execute($name, $proto, $code);
+	# import code into database, incrementing version
+	$sth = $dbh->prepare("insert into $table (name, plsql_spec, language, version, code) values(?, ?, 'Perl5', ?, ?)");
+	$sth->execute($name, $proto, $version+1, $code);
 	$sth->finish;
 
 	# create C wrapper if we have a prototype

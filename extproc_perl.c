@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.38 2004/04/20 17:59:06 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.40 2004/09/16 20:19:21 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"2.00"
+#define EXTPROC_PERL_VERSION	"2.01"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -151,7 +151,6 @@ void ora_exception(EP_CONTEXT *c, char *msg)
 {
 	char str[1024];
 
-	EP_DEBUGF(c, "IN ora_exception(%p, \"%s\")", c, msg);
 	snprintf(str, 1023, "PERL EXTPROC ERROR: %s\n", msg);
 	OCIExtProcRaiseExcpWithMsg(c->oci_context.ctx, ORACLE_USER_ERR, str, 0);
 }
@@ -351,6 +350,34 @@ void clear_null(void *p)
 	hv_delete(nullhv, key, strlen(key), G_DISCARD);
 }
 
+int get_parsed_sub_version(char *name)
+{
+	HV *versionhv;
+	SV **versionsv;
+	int version;
+	EP_CONTEXT *c = &my_context;
+
+	EP_DEBUGF(c, "IN get_parsed_sub_version(\"%s\")", name);
+	versionhv = get_hv("ExtProc::_sub_version", TRUE);
+	versionsv = hv_fetch(versionhv, name, strlen(name), 0);
+
+	if (!versionsv) return(0);
+	version = SvIV(*versionsv);
+	return(version);
+}
+
+void set_parsed_sub_version(char *name, int version)
+{
+	HV *versionhv;
+	SV *versionsv;
+	EP_CONTEXT *c = &my_context;
+
+	EP_DEBUGF(c, "IN set_parsed_sub_version(\"%s\", %d)", name, version);
+	versionhv = get_hv("ExtProc::_sub_version", TRUE);
+	versionsv = newSViv(version);
+	hv_store(versionhv, name, strlen(name), versionsv, 0);
+}
+
 static char *call_perl_sub(EP_CONTEXT *c, char *sub, char **args)
 {
 	STRLEN len;
@@ -411,7 +438,7 @@ static char *call_perl_sub(EP_CONTEXT *c, char *sub, char **args)
 char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
 {
 	char *fqsub;
-	int status;
+	int status, version1, version2, reparse;
 	SV *codesv;
 
 	EP_DEBUGF(c, "IN parse_code(%p, %p, '%s')", c, code, sub);
@@ -427,9 +454,34 @@ char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
 	}
 	EP_DEBUGF(c, "-- fully qualified sub name is '%s'", fqsub);
 
-	if (!get_cv(fqsub, FALSE)) {
+	/* is there more recent code in the database? */
+	if (c->reparse_subs) {
+		EP_DEBUG(c, "-- reparse_subs is enabled");
+		version1 = fetch_sub_version(c, sub);
+		EP_DEBUG(c, "RETURN parse_code");
+		if (version1 < 0) {
+			EP_DEBUG(c, "-- error in fetch_sub_version()");
+			return(NULL);
+		}
+		else if (version1 > 0) {
+			version2 = get_parsed_sub_version(sub);
+			EP_DEBUG(c, "RETURN parse_code");
+			EP_DEBUGF(c, "-- parsed version is %d", version2);
+			EP_DEBUGF(c, "-- database version is %d", version1);
+			reparse = (version1 > version2) ? 1 : 0;
+		}
+		else {
+			reparse = 0;
+		}
+	}
+	else {
+		reparse = 0;
+	}
+
+	if (reparse || !get_cv(fqsub, FALSE)) {
 		/* load code -- fail silently if no code is available */
 		EP_DEBUG(c, "-- attempting to fetch code from database");
+				
 		status = fetch_code(c, code, sub);
 		EP_DEBUG(c, "RETURN parse_code");
 		if (status != OCI_SUCCESS && status != OCI_SUCCESS_WITH_INFO) {
@@ -468,6 +520,10 @@ char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
 			ora_exception(c, "invalid subroutine");
 			return(NULL);
 		}
+
+		/* save version */
+		set_parsed_sub_version(sub, version1);
+		EP_DEBUG(c, "RETURN parse_code");
 	}
 
 	EP_DEBUG(c, "-- CV is cached");
@@ -915,6 +971,15 @@ char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCII
 		if (c->ddl_format == EP_DDL_FORMAT_PACKAGE) {
 			strcpy(res, "PACKAGE");
 		}
+	}
+	else if (!strncmp(param, "reparse_subs", 12)) {
+		if (c->reparse_subs) {
+			strcpy(res, "ENABLED");
+		}
+		else {
+			strcpy(res, "DISABLED");
+		}
+		*ret_ind = OCI_IND_NOTNULL;
 	}
 	else {
 		ora_exception(c, "ora_perl_config: unknown parameter");

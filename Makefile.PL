@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.34 2004/04/12 19:14:10 jeff Exp $
+# $Id: Makefile.PL,v 1.36 2004/05/05 17:59:04 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -255,7 +255,7 @@ CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_
 OBJS=extproc_perl.o oci.o config.o
 TESTOBJS=testcode.o
 XSIOBJS=perlxsi.o
-CONFS=extproc_perl.conf ep_package.sql ep_schema.sql migrate-1_99_07.sql
+CONFS=extproc_perl.conf ep_package.sql ep_schema.sql ep_upgrade.sql
 
 all: extproc_perl.${dlext} \$(CONFS)
 
@@ -268,8 +268,8 @@ ep_package.sql: ep_package.sql.in
 ep_schema.sql: ep_schema.sql.in
 	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%g; s%-CODETABLE-%$code_table%g; s%-INSTPATH-%$instpath%g;' ep_schema.sql.in > \$@
 
-migrate-1_99_07.sql: migrate-1_99_07.sql.in
-	\$(PERL) -p -e 's%-CODETABLE-%$code_table%g;' migrate-1_99_07.sql.in > \$@
+ep_upgrade.sql: ep_upgrade.sql.in
+	\$(PERL) -p -e 's%-CODETABLE-%$code_table%g;' ep_upgrade.sql.in > \$@
 
 perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
