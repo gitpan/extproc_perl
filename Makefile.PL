@@ -3,7 +3,7 @@
 # Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
 
-# $Id: Makefile.PL,v 1.18 2003/05/22 19:42:28 jeff Exp $
+# $Id: Makefile.PL,v 1.19 2003/06/16 01:46:59 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -147,7 +147,7 @@ chomp $tainting;
 unless ($tainting) {
 	$tainting = $DEFAULT_TAINTING;
 }
-my $TAINTING_DEF = ($debugging =~ /^y/i) ? "-DEP_TAINTING" : "";
+my $TAINTING_DEF = ($tainting =~ /^y/i) ? "-DEP_TAINTING" : "";
 
 my $CC = $Config{'cc'};
 my $LD = $Config{'ld'};

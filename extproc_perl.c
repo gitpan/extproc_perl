@@ -5,7 +5,7 @@
  * All rights reserved.
  */
 
-/* $Id: extproc_perl.c,v 1.36 2003/05/22 19:36:20 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.38 2003/06/18 17:02:07 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.0"
+#define EXTPROC_PERL_VERSION	"1.01"
 
 #define PERL_NO_GET_CONTEXT
 
@@ -340,7 +340,9 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	/* check for request to load code from the database */
 	if (!strncmp(sub, "_preload", 10)) {
 		get_code(ctx, code_table, code);
+		TAINT_NOT;
 		eval_pv(code, TRUE);
+		TAINT;
 		*ret_ind = OCI_IND_NULL;
 		return("\0");
 	}
@@ -401,7 +403,9 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 
 		/* parse code */
 		EP_DEBUG("-- parsing code from database...");
+		TAINT_NOT;
 		eval_pv(code, TRUE);
+		TAINT;
 		EP_DEBUG("-- parsing successful");
 
 		/* try again */
@@ -497,7 +501,9 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 	/* check for request to load code from the database */
 	if (!strncmp(sub, "_preload", 10)) {
 		get_code(ctx, code_table, code);
+		TAINT_NOT;
 		eval_pv(code, TRUE);
+		TAINT;
 		return;
 	}
 
@@ -530,7 +536,9 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 		get_code(ctx, code_table, code);
 
 		/* parse code */
+		TAINT_NOT;
 		eval_pv(code, TRUE);
+		TAINT;
 
 		/* try again */
 		if (!get_cv(sub, FALSE)) {

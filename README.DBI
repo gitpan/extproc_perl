@@ -1,4 +1,4 @@
-$Id: README.DBI,v 1.7 2003/04/16 14:29:12 jeff Exp $
+$Id: README.DBI,v 1.8 2003/06/14 01:59:56 jeff Exp $
 
 It may be useful to query the calling database from an external Perl procedure.
 Since DBI is the standard Perl module for database access, it makes sense to
@@ -30,26 +30,18 @@ Here's how to apply the patches:
 5) Rebuild extproc_perl and include DBI and DBD::Oracle in the list of modules
    to link with.
 
-To use DBI to connect back to the calling database, you need the current
-OCIExtProcContext object.  What, you say?  Don't worry -- the ExtProc module
-and DBD::Oracle take care of this for you.  Retrieve the context using the
-ExtProc::context method, and pass it to the DBI->connect method as an
-attribute.  No need to pass a username or password, as you are technically
-already connected to the database as the user who called the external
-procedure!  Just set the database name to 'extproc', NOT the name of the
-database (or you'll connect normally, incurring a LOT of overhead).
+To connect back to the calling database, call the ExtProc->dbi_connect method
+from the ExtProc module, which will return a DBI handle.  It wraps DBI->connect
+and helps manage the internal magic that glues extproc_perl and DBD::Oracle
+together.
 
 The example below is from the ExtProc module documentation:
 
  use DBI;
  use ExtProc;
 
- # get the current OCI context
- my $context = ExtProc::context;
-
  # connect back to the calling database
- my $dbh = DBI->connect("dbi:Oracle:extproc", "", "",
-            { 'ora_context' => $context });
+ my $dbh = ExtProc->dbi_connect;
 
 If you are connecting to another database, one which did NOT call the external
 procedure, just use DBI as you normally would.

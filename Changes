@@ -1,4 +1,9 @@
-$Id: Changes,v 1.14 2003/05/22 20:25:21 jeff Exp $
+$Id: Changes,v 1.16 2003/06/18 17:07:39 jeff Exp $
+
+1.01	Wed Jun 18 13:04:17 EDT 2003
+	* Tainting configuration option now sets CC defines properly
+	* Fixed tainted eval failure when loading code from database
+	* Updated some old callback documentation
 
 1.0	Thu May 22 16:24:50 EDT 2003
 	* UPDATED LICENSE -- commercial redistribution requires approval

@@ -1,6 +1,7 @@
-$Id: TODO,v 1.13 2003/05/22 15:32:55 jeff Exp $
+$Id: TODO,v 1.14 2003/06/18 16:58:38 jeff Exp $
 
 * Opcode-level security (in addition to tainting)
+* More flexible argument & return value data types
 * ATTEMPT to integrate data and/or interpreter persistence across sessions
   (no ETA)
 * Fix segfault when using threaded perl (no ETA)
