@@ -6,13 +6,13 @@
 # This package is free software; you can redistribute it and/or modify it under
 # the same terms as Perl itself.
 
-# $Id: Makefile.PL,v 1.9 2002/11/20 20:46:11 jhorwitz Exp $
+# $Id: Makefile.PL,v 1.10 2003/04/10 18:18:44 jeff Exp $
 
 # Makefile generator for extproc_perl
 
 use Config;
 
-my $DEFAULT_MODS = "IO Socket attrs DBI DBD::Oracle";
+my $DEFAULT_MODS = "IO Socket attrs Fcntl DBI DBD::Oracle";
 
 print "Verifying configuration...\n\n";
 
@@ -52,7 +52,8 @@ Oracle does not support Perl's dynamic loading of modules, so you need to
 specify at compile time which modules you want to use.  This does not apply
 to Perl-only modules, but you can enter them here anyway if you are unsure,
 and they will be ignored.  ExtProc is automatically included, so you don't
-need to specify it here.
+need to specify it here.  Type "+" first if you want to add to the default
+list instead of replacing it (e.g. "+Authen::Krb5 HTML::Parser").
 
 _DONE_
 
@@ -61,6 +62,9 @@ my $mods = <STDIN>;
 chomp $mods;
 unless ($mods) {
 	$mods = $DEFAULT_MODS;
+}
+if ($mods =~ /^\+(.*)/) {
+	$mods = "$DEFAULT_MODS $1";
 }
 
 if (open(FILE, ">.modules")) {

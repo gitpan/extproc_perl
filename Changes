@@ -1,4 +1,13 @@
-$Id: Changes,v 1.9 2002/11/22 19:22:28 jhorwitz Exp $
+$Id: Changes,v 1.10 2003/04/12 17:03:30 jeff Exp $
+
+0.95	Sat Apr 12 13:03:20 EDT 2003
+	* Added support for calling a Perl subroutine as a procedure
+	* Procedural calls enable support of DML statements from the
+	  external proceudure
+	* Added Fcntl as a default built-in module
+	* Can add to default module list instead of replacing it
+	* _preload() special subroutine forces loading of code from database
+	* Updated documentation
 
 0.94	Fri Nov 22 13:58:08 EST 2002
 	* Renamed "context" attribute to "ora_context" in DBD::Oracle patch

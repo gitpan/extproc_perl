@@ -8,7 +8,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: simple_query.c,v 1.4 2002/11/21 18:58:43 jhorwitz Exp $ */
+/* $Id: simple_query.c,v 1.5 2003/04/11 15:40:02 jeff Exp $ */
 
 #include <oci.h>
 #include "extproc_perl.h"
@@ -97,6 +97,14 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 
 	strncpy(res, out, MAX_SIMPLE_QUERY_RESULT);
 
+	err = OCIHandleFree(oci_ctxp->stmtp, OCI_HTYPE_STMT);
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		if (!silent) {
+			ora_exception(ctx,"OCIHandleFree");
+		}
+		return(err);
+	}
+
 	return(0);
 }
 
@@ -167,6 +175,14 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
 		if (!silent) {
 			ora_exception(ctx,"exec");
+		}
+		return(err);
+	}
+
+	err = OCIHandleFree(oci_ctxp->stmtp, OCI_HTYPE_STMT);
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		if (!silent) {
+			ora_exception(ctx,"OCIHandleFree");
 		}
 		return(err);
 	}

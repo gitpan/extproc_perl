@@ -8,7 +8,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.c,v 1.17 2002/11/22 19:26:40 jhorwitz Exp $ */
+/* $Id: extproc_perl.c,v 1.23 2003/04/12 16:15:35 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,7 +26,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"0.94"
+#define EXTPROC_PERL_VERSION	"0.95"
 
 static PerlInterpreter *perl;
 static char code_table[256];
@@ -136,13 +136,13 @@ static char *call_perl_sub(OCIExtProcContext *ctx, char *sub, char **args)
 	return(retval);
 }
 
-/* entry point from oracle external procedure process */
-char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
+/* entry point from oracle function */
+char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 {
 	int status, n = 0;
 	va_list ap;
 	short ind;
-	char *args[MAXARGS], *retval, user[1024], code[MAX_CODE_SIZE];
+	char *args[MAXARGS], *retval, code[MAX_CODE_SIZE];
 
 	/* set OCI context for ExtProc module */
 	this_ctx = ctx;
@@ -199,6 +199,14 @@ char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	/* the following special subs must be run AFTER the perl interpreter */
 	/* has been initialized */
 
+	/* check for request to load code from the database */
+	if (!strncmp(sub, "_preload", 10)) {
+		get_code(ctx, code_table, code);
+		eval_pv(code, TRUE);
+		*ret_ind = OCI_IND_NULL;
+		return("\0");
+	}
+
 	/* check for code table change */
 	if (!strncmp(sub, "_codetable", 10)) {
 		if (args[0]) {
@@ -218,12 +226,6 @@ char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 			*ret_ind = OCI_IND_NULL;
 			return("\0");
 		}
-	}
-
-	/* check for easter egg */
-	if (!strncmp(sub, "_easteregg", 10)) {
-		*ret_ind = OCI_IND_NOTNULL;
-		return("Sorry, no easter eggs here.  They're a waste of resources. :-D");
 	}
 
 	/*
@@ -250,4 +252,93 @@ char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	*ret_ind = retval ? OCI_IND_NOTNULL : OCI_IND_NULL;
 
 	return(retval);
+}
+
+/* entry point from oracle procedure */
+void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
+{
+	int status, n = 0;
+	va_list ap;
+	short ind;
+	char *args[MAXARGS], code[MAX_CODE_SIZE];
+
+	/* set OCI context for ExtProc module */
+	this_ctx = ctx;
+
+	/* grab arguments, NULL terminated */
+	va_start(ap, sub);
+
+	while (n < MAXARGS) {
+		args[n] = va_arg(ap, char*);
+		ind = va_arg(ap, int);
+		if (ind == OCI_IND_NULL) {
+			args[n] = NULL;
+			break;
+		}
+		n++;
+	}
+	va_end(ap);
+
+	/* check for flush request */
+	if (!strncmp(sub, "_flush", 6)) {
+		/* only destroy the interpreter if it exists */
+		if (perl) {
+			pl_shutdown(perl);
+			perl = NULL;
+		}
+		return;
+	}
+
+	/* start perl interpreter if necessary */
+	if (!perl) {
+		perl = pl_startup();
+		if (!perl) {
+			ora_exception(ctx, "pl_startup failed -- check bootstrap file with 'perl -cw'");
+			return;
+		}
+		/* set code table */
+		strncpy(code_table, CODE_TABLE, 255);
+	}
+
+	/* the following special subs must be run AFTER the perl interpreter */
+	/* has been initialized */
+
+	/* check for request to load code from the database */
+	if (!strncmp(sub, "_preload", 10)) {
+		get_code(ctx, code_table, code);
+		eval_pv(code, TRUE);
+		return;
+	}
+
+	/* check for code table change */
+	if (!strncmp(sub, "_codetable", 10)) {
+		if (args[0]) {
+			strncpy(code_table, args[0], 255);
+		}
+		else {
+			ora_exception(ctx, "can't return codetable from a procedure'");
+			return;
+		}
+	}
+
+	/*
+	 * verify that the subroutine is valid (autoloading not supported)
+	 * try loading code from database if it isn't initially valid.
+	 */
+	if (!get_cv(sub, FALSE)) {
+		/* load code -- fail silently if no code is available */
+		get_code(ctx, code_table, code);
+
+		/* parse code */
+		eval_pv(code, TRUE);
+
+		/* try again */
+		if (!get_cv(sub, FALSE)) {
+			ora_exception(ctx, "invalid subroutine");
+			return;
+		}
+	}
+
+	/* run subroutine */
+	call_perl_sub(ctx, sub, args);
 }

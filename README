@@ -1,4 +1,4 @@
-$Id: README,v 1.16 2002/11/22 19:47:52 jhorwitz Exp $
+$Id: README,v 1.18 2003/04/12 16:56:01 jeff Exp $
 
 Oracle Perl Procedure Library
 
@@ -71,7 +71,9 @@ Otherwise, the query fails with an "invalid subroutine" error message.
 
 This strategy ensures that bootstrap code will always be pre-loaded and
 that the database is only queried when necessary, eliminating any overhead
-associated with the query.
+associated with the query.  If needed (see POD documentation), you can force
+extproc_perl to load the code from the database using the _preload special
+subroutine.
 
 BUGS & CAVEATS
 --------------
@@ -82,10 +84,6 @@ BUGS & CAVEATS
 * Syntax checking using "perl -cw" will fail if you use the Extproc module,
   as it requires the extproc_perl library to be loaded.  Set the LD_PRELOAD
   environment variable to the path of the library to check syntax in this case.
-
-* You cannot use DDL or DML statements from an extproc_perl script.  This
-  means you cannot do things like create or drop a table or insert or update
-  rows in a table, effectively making the database read-only.
 
 * Code in bootstrap files is only available to databases local to that machine.
   If you are running parallel server, you will either have to replicate
