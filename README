@@ -1,4 +1,4 @@
-$Id: README,v 1.8 2001/08/20 19:30:03 jhorwitz Exp $
+$Id: README,v 1.10 2001/08/20 19:58:01 jhorwitz Exp $
 
 Oracle Perl Procedure Library
 
@@ -8,7 +8,8 @@ the same terms as Perl itself.
 
 extproc_perl enables Oracle stored procedures and functions to be written
 in Perl.  It uses Oracle 8's external procedure interface to create Perl
-interpreters on the fly to execute Perl subroutines.
+interpreters on the fly to execute Perl subroutines.  These interpreters
+are persistent throughout the life of the database connection.
 
 Please send all bug reports, questions and suggestions to jeff@smashing.org.
 
@@ -36,6 +37,15 @@ This is quick and dirty.  See the INSTALL file for more detailed information.
  8) have your DBA create an Oracle function that references the code in the
     library.  see extproc_perl.sql for sample code.
  9) have your DBA start a listener for extproc connections.
+
+PERSISTENCE
+-----------
+Any Perl interpreters created by extproc_perl are persistent for the life of
+the Oracle external procedure process.  According to Oracle documentation,
+this process should remain alive until the client process disconnects from
+the database.  This means that you will have persistence throughout any
+particular session, but neither the data nor the interpreter will persist
+beyond that session.
 
 BUGS & CAVEATS
 --------------

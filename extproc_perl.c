@@ -6,7 +6,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.c,v 1.6 2001/08/15 21:21:16 jhorwitz Exp $ */
+/* $Id: extproc_perl.c,v 1.7 2001/08/20 19:59:29 jhorwitz Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,7 +23,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"0.9"
+#define EXTPROC_PERL_VERSION	"0.91"
 
 static PerlInterpreter *perl;
 OCIExtProcContext *this_ctx; /* for ExtProc module */

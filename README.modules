@@ -1,4 +1,4 @@
-$Id: MODULES,v 1.1 2001/08/20 18:17:06 jhorwitz Exp $
+$Id: README.modules,v 1.1 2001/08/20 18:17:06 jhorwitz Exp $
 
 Oracle does not support (nor does it work anyway) the dynamic loading of
 shared objects from an external procedure.  Therefore, the use of the dl*

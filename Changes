@@ -1,4 +1,7 @@
-$Id: Changes,v 1.1 2001/08/15 19:24:50 jhorwitz Exp $
+$Id: Changes,v 1.2 2001/08/20 20:00:34 jhorwitz Exp $
+
+0.91	Mon Aug 20 15:59:57 EDT 2001
+	* Update documentation for persistence and special functions
 
 0.90	Wed Aug 15 15:17:54 EDT 2001
 	* Initial revision

@@ -1,0 +1,9 @@
+$Id: README.special,v 1.1 2001/08/20 20:05:52 jhorwitz Exp $
+
+The following subroutines are reserved for extproc_perl and may be called
+like any other Perl subroutine from Oracle.
+
+_flush() -- Destroys Perl interpreter and all Perl data.  A new interpreter
+   will be started for the next query.
+
+_version() -- Reports the version of the currently loaded extproc_perl.

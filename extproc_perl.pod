@@ -46,6 +46,24 @@ ExtProc is a module that is statically linked into the extproc_perl object.
 It provides several functions that interact with the Oracle database itself.
 See the ExtProc(3) manpage for details.
 
+=head1 SPECIAL SUBROUTINES
+
+The following subroutines are reserved for extproc_perl, and can be called
+like any other Perl subroutine from Oracle.
+
+=over 4
+
+=item _flush()
+
+Destroys Perl interpreter and all Perl data.  A new interpreter will be started
+for the next query.
+
+=item _version()
+
+Reports the version of the currently loaded extproc_perl.
+
+=back
+
 =head1 AUTHOR
 
 Jeff Horwitz <jeff@smashing.org>
