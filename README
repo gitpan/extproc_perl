@@ -1,4 +1,4 @@
-$Id: README,v 1.10 2001/08/20 19:58:01 jhorwitz Exp $
+$Id: README,v 1.12 2001/08/31 15:35:52 jhorwitz Exp $
 
 Oracle Perl Procedure Library
 
@@ -11,6 +11,9 @@ in Perl.  It uses Oracle 8's external procedure interface to create Perl
 interpreters on the fly to execute Perl subroutines.  These interpreters
 are persistent throughout the life of the database connection.
 
+A patch for DBD::Oracle is supplied that enables the use of DBI to make
+queries back to the calling database without establishing a new connection.
+
 Please send all bug reports, questions and suggestions to jeff@smashing.org.
 
 REQUIREMENTS
@@ -19,6 +22,7 @@ o Perl 5.005_62 or later (built and tested with 5.6.1)
 o shared libperl
 o Oracle 8 server with OCI development libraries and headers (built and
   tested with 8.1.7 -- may work with earlier versions)
+o OPTIONAL: DBI and DBD::Oracle 1.08 or later
 
 BUILDING & INSTALLATION
 -----------------------
@@ -49,8 +53,6 @@ beyond that session.
 
 BUGS & CAVEATS
 --------------
-* You must end the boostrap file with "return 1;" or the embedded interpreter
-  will barf.  This may break testing with "perl -cw".
 * Since modules are statically compiled into the binary, you must recompile
   in order to use any new modules installed since the last compile.  This
   only applies to modules with shared object code (usually compiled from C).

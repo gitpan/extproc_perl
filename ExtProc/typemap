@@ -1,0 +1,10 @@
+# $Id: typemap,v 1.1 2001/08/31 14:59:18 jhorwitz Exp $
+
+TYPEMAP
+
+ExtProc::OCIExtProcContext	T_PTROBJ_NU
+
+OUTPUT
+
+T_PTROBJ_NU
+	sv_setref_pv($arg, \"${ntype}\", (void*)$var);

@@ -1,0 +1,48 @@
+$Id: README.DBI,v 1.2 2001/08/31 17:27:40 jhorwitz Exp $
+
+It may be useful to query the calling database from an external Perl procedure.
+Since DBI is the standard Perl module for database access, it makes sense to
+use it, along with the DBD::Oracle driver, to connect back to the database.
+Support for external procedures is not included with the current version of
+DBI (1.08 as of this writing), so we supply a patch for that version.  Here's
+how to apply it:
+
+1) Verify the DBD::Oracle distribution is in the DBD-Oracle-1.08 directory.
+2) run: chmod 644 DBD-Oracle-1.08/dbdimp.c
+3) copy DBD-Oracle.patch from the extproc_perl distribution to the current
+   directory.
+4) run: patch -p0 < DBD-Oracle.patch
+5) Rebuild and install DBD::Oracle
+6) Rebuild extproc_perl and include DBI and DBD::Oracle in the list of modules
+   to link with.
+
+To use DBI to connect back to the calling database, you need the current
+OCIExtProcContext object.  What, you say?  Don't worry -- the ExtProc module
+and DBD::Oracle take care of this for you.  Retrieve the context using the
+ExtProc::context method, and pass it to the DBI->connect method as an
+attribute.  No need to pass a username or password, as you are technically
+already connected to the database as the user who called the external
+procedure!  Just set the database name to 'extproc', NOT the name of the
+database (or you'll connect normally, incurring a LOT of overhead).
+
+The example below is from the ExtProc module documentation:
+
+ use DBI;
+ use ExtProc;
+
+ # get the current OCI context
+ my $context = ExtProc::context;
+
+ # connect back to the calling database
+ my $dbh = DBI->connect("dbi:Oracle:extproc", "", "",
+            { 'context' => $ctx });
+
+If you are connecting to another database, one which did NOT call the external
+procedure, just use DBI as you normally would.
+
+IMPORTANT: External procedures are NOT stateful, which means that there is
+no concept of a "connection" back to the calling database.  Therefore, you
+need to call DBI->connect EACH TIME you want to make a query.  Don't worry,
+it's very fast, since Oracle has already set up the infrastructure to make
+these queries.  You can call the disconnect method to be proper, but it's
+probably not mandatory.

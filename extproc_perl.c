@@ -6,7 +6,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.c,v 1.7 2001/08/20 19:59:29 jhorwitz Exp $ */
+/* $Id: extproc_perl.c,v 1.10 2001/08/29 19:35:14 jhorwitz Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,7 +23,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"0.91"
+#define EXTPROC_PERL_VERSION	"0.93"
 
 static PerlInterpreter *perl;
 OCIExtProcContext *this_ctx; /* for ExtProc module */
@@ -36,92 +36,6 @@ void ora_exception(OCIExtProcContext *ctx, char *msg)
 	OCIExtProcRaiseExcpWithMsg(ctx, ORACLE_USER_ERR, str, 0);
 }
 
-#if 0
-/* NEEDS REAL ERROR MESSAGES */
-int simple_text_query(OCIExtProcContext *ctx, char *sql, char *res)
-{
-	ocictx oci_ctx;
-	ocictx *oci_ctxp = &oci_ctx;
-	OCIDefine *def1;
-	text out[1024];
-	int err;
-	
-	err = OCIExtProcGetEnv(ctx,
-		&oci_ctxp->envhp,
-		&oci_ctxp->svchp,
-		&oci_ctxp->errhp);
-
-	if (err) {
-		ora_exception(ctx,"getenv");
-		return(err);
-	}
-
-	err = OCIHandleAlloc(oci_ctxp->envhp,
-		(dvoid **)&oci_ctxp->stmtp,
-		OCI_HTYPE_STMT,
-		0,
-		0);
-
-	if (err) {
-		ora_exception(ctx,"handlealloc");
-		return(err);
-	}
-
-	err = OCIStmtPrepare(oci_ctxp->stmtp,
-		oci_ctxp->errhp,
-		(text *) sql,
-		strlen(sql),
-		OCI_NTV_SYNTAX,
-		OCI_DEFAULT);
-
-	if (err) {
-		ora_exception(ctx,"prepare");
-		return(err);
-	}
-
-	err = OCIStmtExecute(oci_ctxp->svchp,
-		oci_ctxp->stmtp,
-		oci_ctxp->errhp,
-		0,
-		0,
-		NULL,
-		NULL,
-		OCI_DEFAULT);
-
-	if (err) {
-		ora_exception(ctx,"exec");
-		return(err);
-	}
-
-	err = OCIDefineByPos(oci_ctxp->stmtp,
-		&def1,
-		oci_ctxp->errhp,
-		1,
-		&out,
-		256,
-		SQLT_STR,
-		(dvoid *) 0,
-		(dvoid *) 0,
-		(dvoid *) 0,
-		OCI_DEFAULT);
-
-	err = OCIStmtFetch(oci_ctxp->stmtp,
-		oci_ctxp->errhp,
-		1,
-		OCI_FETCH_NEXT,
-		OCI_DEFAULT);
-
-	if (err) {
-		ora_exception(ctx,"fetch");
-		return(err);
-	}
-
-	strncpy(res, out, 1024);
-
-	return(0);
-}
-#endif
-
 PerlInterpreter *pl_startup(void)
 {
 	PerlInterpreter *p;
@@ -133,7 +47,7 @@ PerlInterpreter *pl_startup(void)
 	PL_perl_destruct_level = 0;
 	perl_construct(p);
 	if (!perl_parse(p, xs_init, 2, args, NULL)) {
-		if (perl_run(p)) {
+		if (!perl_run(p)) {
 			return(p);
 		}
 	}
@@ -215,9 +129,12 @@ char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	va_end(ap);
 
 	/* check for flush request */
-	if (!strncmp(sub, "_flush", 6) && perl) {
-		pl_shutdown(perl);
-		perl = NULL;
+	if (!strncmp(sub, "_flush", 6)) {
+		/* only destroy the interpreter if it exists */
+		if (perl) {
+			pl_shutdown(perl);
+			perl = NULL;
+		}
 		*ret_ind = OCI_IND_NULL;
 		return("\0");
 	}
@@ -239,7 +156,7 @@ char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	}
 
 	/* verify that the subroutine is valid (autoloading not supported) */
-	if (!get_sv(sub, FALSE)) {
+	if (!get_cv(sub, FALSE)) {
 		*ret_ind = OCI_IND_NULL;
 		ora_exception(ctx, "invalid subroutine");
 		return("\0");

@@ -1,4 +1,4 @@
-$Id: INSTALL,v 1.3 2001/08/20 19:56:25 jhorwitz Exp $
+$Id: INSTALL,v 1.4 2001/08/23 21:13:30 jhorwitz Exp $
 
 INSTALLATION PROCEDURE
 
@@ -41,10 +41,7 @@ INSTALLATION PROCEDURE
    but you'll probably want to add some more.
 
 6) Enter the path to the Perl bootstrap file.  This file contains the Perl
-   subroutines that you will call from Oracle.  It should be written exactly
-   like any other Perl script, except that you need a "return 1;" at the end
-   of the script.  This may break testing with "perl -cw" -- a fix is being
-   investigated.
+   subroutines that you will call from Oracle.
 
 7) The Makefile should have been written in the previous step.  Type 'make' to
    build extproc_perl and the ExtProc Perl module.

@@ -8,7 +8,7 @@ extproc_perl - Oracle Perl Procedure Library
 
 =over 4
 
-select perl_sub('sub1','1','2') from dual;
+select perl('sub1','1','2') from dual;
 
 =back
 
@@ -16,7 +16,7 @@ select perl_sub('sub1','1','2') from dual;
 
 =over 4
 
-exec perl_sub('sub2','arg1');
+exec perl('sub2','arg1');
 
 =back
 
