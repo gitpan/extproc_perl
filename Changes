@@ -1,4 +1,9 @@
-$Id: Changes,v 1.19 2004/04/12 16:00:07 jeff Exp $
+$Id: Changes,v 1.20 2004/04/14 23:39:53 jeff Exp $
+
+1.99_09	Thu Apr 15 13:26:05 EDT 2004
+	* better runtime error reporting
+	* fixed problem importing source code > 4000 bytes
+	* be more forgiving with whitespace in prototypes
 
 1.99_08 Mon Apr 12 11:57:09 EDT 2004
 	* per-database configuration directives (dbname:config)

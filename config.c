@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.15 2004/04/11 21:06:40 jeff Exp $ */
+/* $Id: config.c,v 1.16 2004/04/14 23:39:53 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +36,7 @@ int read_config(EP_CONTEXT *c, char *fn)
 		c->use_namespace = 1;
 		c->tainting = 1;
 		c->package_subs = 0;
-		c->max_code_size = 4000;
+		c->max_code_size = 32768;
 		c->max_sub_args = 32;
 		c->ddl_format = EP_DDL_FORMAT_STANDARD;
 		return(1);

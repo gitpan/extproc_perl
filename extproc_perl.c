@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.34 2004/04/12 16:00:07 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.36 2004/04/14 23:39:53 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.99_08"
+#define EXTPROC_PERL_VERSION	"1.99_09"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -434,6 +434,7 @@ char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
 		EP_DEBUG(c, "RETURN parse_code");
 		if (status != OCI_SUCCESS && status != OCI_SUCCESS_WITH_INFO) {
 			EP_DEBUG(c, "-- code fetch failed");
+			ora_exception(c, "invalid subroutine");
 			return(NULL);
 		}
 
@@ -446,7 +447,7 @@ char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
 			sv_catpvf(codesv, "%s;\n", c->package);
 			sv_catpv(codesv, code->code);
 			sv_catpv(codesv, "\npackage main;\n");
-			eval_sv(codesv, TRUE);
+			eval_sv(codesv, G_DISCARD);
 			LEAVE;
 		}
 		else {
@@ -454,9 +455,17 @@ char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
 		}
 		TAINT;
 
+		/* check for eval errors */
+		if (SvTRUE(ERRSV)) {
+			EP_DEBUGF(c, "-- error in eval: %s", SvPV(ERRSV, PL_na));
+			ora_exception(c, SvPV(ERRSV, PL_na));
+			return(NULL);
+		}
+
 		/* try again */
 		if (!get_cv(fqsub, FALSE)) {
 			EP_DEBUG(c, "-- still no valid CV");
+			ora_exception(c, "invalid subroutine");
 			return(NULL);
 		}
 	}
@@ -531,7 +540,6 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	fqsub = parse_code(c, &code, sub);
 	if (!fqsub) {
 		*ret_ind = OCI_IND_NULL;
-		ora_exception(c, "invalid subroutine");
 		return(NULL);
 	}
 
@@ -605,7 +613,6 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 
 	fqsub = parse_code(c, &code, sub);
 	if (!fqsub) {
-		ora_exception(c, "invalid subroutine");
 		return;
 	}
 

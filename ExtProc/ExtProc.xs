@@ -1,4 +1,4 @@
-/* $Id: ExtProc.xs,v 1.12 2004/04/11 21:06:40 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.13 2004/04/14 23:39:53 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -131,6 +131,9 @@ config(name)
 	}
 	else if (strEQ(name, "ddl_format")) {
 		XPUSHs(newSViv(my_contextp->ddl_format));
+	}
+	else if (strEQ(name, "max_code_size")) {
+		XPUSHs(newSViv(my_contextp->max_code_size));
 	}
 	else {
 		ora_exception(my_contextp, "unknown configuration directive");

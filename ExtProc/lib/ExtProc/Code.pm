@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.36 2004/04/12 15:58:47 jeff Exp $
+# $Id: Code.pm,v 1.38 2004/04/14 23:39:53 jeff Exp $
 
 package ExtProc::Code;
 
@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_08';
+our $VERSION = '1.99_09';
 
 use ExtProc qw(ep_debug put_line);
 use File::Spec;
@@ -96,7 +96,7 @@ sub create_wrapper
 	# prototype format: SUBTYPE name([arg1[,arg2,...]]) [RETURN type]
 
 	# sub with arguments
-	if ($proto =~ /^(FUNCTION|PROCEDURE)\s+([\w\d_\-]+)\(([^\}]+)\)(.*)$/oi) {
+	if ($proto =~ /^(FUNCTION|PROCEDURE)\s+([\w\d_\-]+)\(\s*([^\}]+)\s*\)(.*)\s*$/oi) {
 		$subtype = "EP_SUBTYPE_".uc($1);
 		$name = $2;
 		$argstr = $3;
@@ -412,13 +412,17 @@ _DONE_
 		}
 
 		print CODE <<_DONE_;
-		ora_exception(c, "invalid subroutine");
 		$return_fatal;
 	}
 
 	EP_DEBUG(c, "-- about to call call_pv()");
 	nret = call_pv(fqsub, G_SCALAR|G_EVAL);
 	EP_DEBUGF(c, "-- call_pv() returned %d", nret);
+	if (SvTRUE(ERRSV)) {
+		EP_DEBUGF(c, "-- ERRSV is defined: %s", SvPV(ERRSV, PL_na));
+		ora_exception(c, SvPV(ERRSV, PL_na));
+		$return_fatal;
+	}
 	SPAGAIN;
 _DONE_
 
@@ -637,7 +641,7 @@ sub import_code
 
 	my $path = File::Spec->catfile($dir, $file);
 	my $size = (stat($path))[7];
-	if ($size > 4000) {
+	if ($size > ExtProc::config('max_code_size')) {
 		ExtProc::ora_exception("file too large for import ($size bytes)");
 		return;
 	}
