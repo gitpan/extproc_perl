@@ -1,7 +1,6 @@
-Oracle Perl Procedure Library
+$Id: COPYRIGHT,v 1.2 2003/11/29 16:25:18 jeff Exp $
 
 Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
-All rights reserved.
 
 This package is free software; you can redistribute it non-commercially and/or
 modify it under the same terms as Perl itself.  Commercial redistribution,

@@ -1,35 +1,39 @@
-#!/bin/sh
+# $Id: gen_module_libs,v 1.2 2003/10/18 16:20:28 jeff Exp $
 
-# Oracle Perl Procedure Library
-#
-# Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
-# All rights reserved.
+# gen_module_libs -- generates list of module shared objects for linking
 
-# $Id: gen_module_libs,v 1.5 2003/05/22 16:39:46 jeff Exp $
+use Config;
+use File::Spec;
+use ExtUtils::Installed;
 
-# gen_module_libs -- generates list of shared objects for which we need to
-# simulate dynamic loading
+my @mods = @ARGV;
+if ($#mods < 0) {
+	# don't run if we're not linking with any modules
+	exit(0);
+}
 
-# don't run if we're not linking with any modules
-if [ $# -eq 0 ]; then
-	exit 0;
-fi
+# set some per-system values and initialize ExtUtils::Installed
+my $dlext = $Config{'dlext'};
+my $archlib = $Config{'installarchlib'};
+my $i = ExtUtils::Installed->new();
 
-# grab required modules
-modules=$*
+# find requested core modules
+my @so;
+my %found;
+foreach my $m (@mods) {
+	my $path = File::Spec->catfile($archlib, 'auto', split(/::/, $m));
+	my @files = grep(/\.$dlext$/, $i->files('Perl', 'all', $path));
+	if ($#files > -1) {
+		push(@so, @files);
+		$found{$m} = 1;
+	}
+}
 
-# find library directories
-archlib=`${PERL} -MConfig -e 'print $Config{installarchlib}'`
-sitelib=`${PERL} -MConfig -e 'print $Config{installsitelib}'`
-privlib=`${PERL} -MConfig -e 'print $Config{installprivlib}'`
-archname=`${PERL} -MConfig -e 'print $Config{archname}'`
-dlext=`${PERL} -MConfig -e 'print $Config{dlext}'`
+# find other non-core modules, excluding ExtProc, which is statically linked
+# make sure we don't search for core modules, or ExtUtils::Installed will croak
+foreach my $m (@mods) {
+	next if (exists($found{$m}) || $m eq 'ExtProc');
+	push(@so, grep(/\.$dlext$/, $i->files($m)));
+}
 
-# find paths to all shared objects
-for m in ${modules}; do
-	relpath=`echo ${m} | sed -e 's%::%/%g'`
-	lib=`find ${archlib}/auto/${relpath} ${sitelib}/${archname}/auto/${relpath} ${privlib}/auto/${relpath} -type f -name \*.${dlext} -print 2>/dev/null`
-	libs="${libs} ${lib}"
-done
-
-echo $libs
+print join(' ', @so), "\n";

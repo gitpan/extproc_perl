@@ -1,0 +1,54 @@
+# $Id: extproc_perl.conf.in,v 1.6 2003/11/28 21:51:09 jeff Exp $
+
+# extproc_perl configuration
+
+### GENERAL CONFIGURATION ###
+
+# format: key value
+# comment out all empty settings with a hash (#)
+
+# path to bootstrap file
+bootstrap_file -BOOTSTRAP-
+
+# name of the code table, including schema if it is not a public synonym
+code_table -CODETABLE-
+
+# additions to perl's include path (@INC) -- colon separated
+#inc_path 
+
+# path to debug output directory
+debug_directory /tmp
+
+### SECURITY ###
+
+# use taint checking -- this applies globally to all subroutines
+# HIGHLY RECOMMENDED!
+enable_tainting yes
+
+### EXPERIMENTAL
+# use per-session namespaces
+enable_session_namespace yes
+
+### NOT IMPLEMENTED YET
+# use Safe module to run code using opcode masks -- EXPERIMENTAL
+enable_opcode_security no
+
+# allow fully-qualified subroutine names in Perl.func & Perl.proc
+# this lets you run any subroutine in any imported package, regardless of
+# its existence as in the code table or bootstrap file.  Very useful for
+# development.  Not recommended for production.
+enable_package_subs no
+
+# path to trusted directory that contains imported code files
+trusted_code_directory -TRUSTEDDIR-
+
+### TUNABLES ###
+
+# maximum code size per subroutine in bytes
+# must be less than or equal to max size of VARCHAR2 (4000)
+# allocated once per interpreter
+max_code_size 4000
+
+# maximum arguments to a subroutine (<=  system max, which is usually 128)
+# there is currently no benefit to tuning this
+max_sub_args 32

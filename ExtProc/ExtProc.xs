@@ -1,11 +1,4 @@
-/*
- * Oracle Perl Procedure Library
- *
- * Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
- * All rights reserved.
- */
-
-/* $Id: ExtProc.xs,v 1.10 2003/06/23 18:39:26 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.8 2003/11/12 00:00:25 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,26 +12,28 @@ extern "C" {
 }
 #endif
 
-extern ocictx this_ctx;
-extern int _connected;
+extern EP_CONTEXT my_context;
+EP_CONTEXT *my_contextp = &my_context;
+
 typedef struct OCIExtProcContext *ExtProc__OCIExtProcContext;
 typedef struct OCIEnv *ExtProc__OCIEnvHandle;
 typedef struct OCISvcCtx *ExtProc__OCISvcHandle;
 typedef struct OCIError *ExtProc__OCIErrHandle;
 
 MODULE = ExtProc		PACKAGE = ExtProc		
+PROTOTYPES: disable
 
 void
-exception(msg)
+ora_exception(msg)
 	char *msg;
 
 	CODE:
-	ora_exception(this_ctx.ctx, msg);
+	ora_exception(my_contextp, msg);
 
 ExtProc::OCIExtProcContext
 context()
 	CODE:
-	RETVAL = this_ctx.ctx;
+	RETVAL = my_contextp->oci_context.ctx;
 
 	OUTPUT:
 	RETVAL
@@ -46,17 +41,17 @@ context()
 void
 _connected_on()
 	CODE:
-	_connected = 1;
+	my_contextp->connected = 1;
 
 void
 _connected_off()
 	CODE:
-	_connected = 0;
+	my_contextp->connected = 0;
 
 int
 _is_connected()
 	CODE:
-	RETVAL = _connected;
+	RETVAL = my_contextp->connected;
 
 	OUTPUT:
 	RETVAL
@@ -64,7 +59,7 @@ _is_connected()
 ExtProc::OCIEnvHandle
 _envhp()
 	CODE:
-	RETVAL = this_ctx.envhp;
+	RETVAL = my_contextp->oci_context.envhp;
 
 	OUTPUT:
 	RETVAL
@@ -72,7 +67,7 @@ _envhp()
 ExtProc::OCISvcHandle
 _svchp()
 	CODE:
-	RETVAL = this_ctx.svchp;
+	RETVAL = my_contextp->oci_context.svchp;
 
 	OUTPUT:
 	RETVAL
@@ -80,47 +75,48 @@ _svchp()
 ExtProc::OCIErrHandle
 _errhp()
 	CODE:
-	RETVAL = this_ctx.errhp;
+	RETVAL = my_contextp->oci_context.errhp;
 
 	OUTPUT:
 	RETVAL
-
-void
-database_name()
-	PREINIT:
-	char res[MAX_SIMPLE_QUERY_RESULT];
-	char *sql = "select ora_database_name from dual";
-
-	PPCODE:
-	simple_query(this_ctx.ctx, sql, res, 0);
-	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
-
-void
-sessionid()
-	PREINIT:
-	char res[MAX_SIMPLE_QUERY_RESULT];
-	char *sql = "select USERENV('sessionid') from dual";
-
-	PPCODE:
-	simple_query(this_ctx.ctx, sql, res, 0);
-	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
-
-void
-user()
-	PREINIT:
-	char res[MAX_SIMPLE_QUERY_RESULT];
-	char *sql = "select user from dual";
-
-	PPCODE:
-	simple_query(this_ctx.ctx, sql, res, 0);
-	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
 
 void
 ep_debug(msg)
 	char *msg;
 
 	CODE:
-#ifdef EP_DEBUGGING
-	ep_debug(msg);
-#endif /* EP_DEBUGGING */
+	if (my_contextp->debug) {
+		ep_debug(my_contextp, msg);
+	}
 
+int
+is_function()
+	CODE:
+	RETVAL = (my_contextp->subtype == EP_SUBTYPE_FUNCTION) ? 1 : 0;
+
+	OUTPUT:
+	RETVAL
+
+int
+is_procedure()
+	CODE:
+	RETVAL = (my_contextp->subtype == EP_SUBTYPE_PROCEDURE) ? 1 : 0;
+
+	OUTPUT:
+	RETVAL
+
+SV *
+config(name)
+	char *name;
+
+	PPCODE:
+	if (strEQ(name, "code_table")) {
+		XPUSHs(newSVpv(my_contextp->code_table, 0));
+	}
+	else if (strEQ(name, "trusted_code_directory")) {
+		XPUSHs(newSVpv(my_contextp->trusted_dir, 0));
+	}
+	else {
+		ora_exception(my_contextp, "unknown configuration directive");
+		XSRETURN_UNDEF;
+	}

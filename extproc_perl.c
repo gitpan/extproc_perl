@@ -1,11 +1,4 @@
-/*
- * Oracle Perl Procedure Library
- *
- * Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
- * All rights reserved.
- */
-
-/* $Id: extproc_perl.c,v 1.49 2003/07/30 20:15:06 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.23 2003/12/27 22:44:29 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,180 +10,295 @@ extern "C" {
 #include <sys/stat.h>
 #include <time.h>
 #include <oci.h>
+
+/* Perl headers */
+#define PERL_NO_GET_CONTEXT
 #include <EXTERN.h>
 #include <perl.h>
+
 #include "extproc_perl.h"
 #ifdef __cplusplus
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.03"
+#define EXTPROC_PERL_VERSION	"1.99_04"
 
-#define PERL_NO_GET_CONTEXT
-
-static PerlInterpreter *perl;
-static char code_table[256] = "";
-ocictx this_ctx; /* for ExtProc module & DBI */
-int _connected; /* for collaboration between extproc_perl & DBI */
+/* register termination function */
+#if defined(__SUNPRO_C)
+#	pragma fini(ep_fini)	
+#elif defined(__GNUC__)
+#	if defined(__i386__) && (defined(sun) || defined(__sun))
+		asm (".section .fini\ncall ep_fini");
+#	elif defined(__i386__) || defined(__sparc__)
+		asm(".section \".fini\"\ncall ep_fini\nnop");
+#	elif defined(__alpha__) && defined(__linux)
+		asm (".section \".fini\"\njsr ep_fini");
+#	endif
+#endif
 
 EXTERN_C void xs_init();
 
-#ifdef EP_DEBUGGING
-static int ep_debugging; /* debug logging flag */
-static FILE *epfp; /* debug log file structure */
+/* per-session context -- contains all the globals from version 1 */
+EP_CONTEXT my_context; 
 
-char *ep_debug_enable(OCIExtProcContext *ctx)
+extern int errno;
+
+/* initialize context */
+void _ep_init(EP_CONTEXT *c, OCIExtProcContext *ctx)
 {
+	int err, sessionid;
+
+	/* initialize ep_debug to a sane value */
+	if (c->debug != 1) {
+		c->debug = 0;
+	}
+
+	/* save OCI context for later */
+	c->oci_context.ctx = ctx;
+
+	/* for each new transaction, a new extproc "connection" */
+	c->connected = 0;
+
+	/* read configuration if necessary */
+	if (c->configured != 1) {
+		if (!read_config(c, EP_CONFIG_FILE)) {
+			ora_exception(c, "FATAL: configuration failed!");
+			return;
+		}
+		c->perl = NULL;
+		c->debug = 0;
+		c->debug_file = NULL;
+
+		/* get oracle session id for use in namespace */
+		if (c->use_namespace) {
+			err = get_sessionid(c, &sessionid);
+			if (err != OCI_SUCCESS && err !=OCI_SUCCESS_WITH_INFO) {
+				ora_exception(c, "FATAL: couldn't retrieve session id from Oracle");
+				return;
+			}
+			snprintf(c->package, 255, "ExtProc::Session%d",
+				sessionid);
+		}
+
+		c->configured = 1;
+	}
+}
+
+void ep_debug_enable(EP_CONTEXT *c)
+{
+	FILE *fp;
 	char *fname;
 	pid_t pid;
 
-	if (ep_debugging) return;
-
-	ep_debugging = 1;
+	if (c->debug) return;
+	c->debug = 1;
 
 	/* use oracle's memory allocation in case we're unloaded */
-	fname = OCIExtProcAllocCallMemory(ctx, MAXPATHLEN+1);
+	fname = OCIExtProcAllocCallMemory(c->oci_context.ctx, MAXPATHLEN+1);
 		
 	/* open log file */
 	pid = getpid();
-	snprintf(fname, MAXPATHLEN, "/tmp/ep_debug.%d", pid);
-	if (!(epfp = fopen(fname, "a+"))) {
+	snprintf(fname, MAXPATHLEN, "%s/ep_debug.%d", c->debug_dir, pid);
+	if (!(fp = fopen(fname, "a+"))) {
 		fprintf(stderr, "extproc_perl: open failed for debug log %s",
 			fname);
-		return(NULL);
+		return;
 	}
 
-	/* redirect stderr */
-	dup2(fileno(epfp), fileno(stderr));
+	/* redirect stderr to log file */
+	dup2(fileno(fp), fileno(stderr));
 
-	return(fname);
+	/* save file info for future use */
+	c->debug_fp = fp;
+	/* copy fname so oracle doesn't deallocate it after transaction */
+	if (c->debug_file) free(c->debug_file);
+	c->debug_file = strdup(fname);
 }
 
-void ep_debug_disable(void)
+void ep_debug_disable(EP_CONTEXT *c)
 {
-	if (!ep_debugging) return;
+	if (!c->debug) return;
 
-	ep_debugging = 0;
+	c->debug = 0;
 
 	/* close log file & stderr */
-	fclose(epfp);
+	fclose(c->debug_fp);
+	c->debug_fp = NULL;
 	fclose(stderr);
 }
 
-void ep_debug(char *fmt, ...)
+void ep_debug(EP_CONTEXT *c, char *fmt, ...)
 {
 	va_list ap;
-	char args[32], *ts;
 	int n = 0;
 	time_t t;
+	char *ts;
 
 	va_start(ap, fmt);
 	t = time(NULL);
 	ts = ctime(&t);
 	ts[strlen(ts)-1] = '\0';
-	fprintf(epfp, "%s ", ts);
-	vfprintf(epfp, fmt, ap);
-	fprintf(epfp, "\n");
-	fflush(epfp);
+	fprintf(c->debug_fp, "%s ", ts);
+	vfprintf(c->debug_fp, fmt, ap);
+	fprintf(c->debug_fp, "\n");
+	fflush(c->debug_fp);
 }
-#endif /* EP_DEBUGGING */
 
-void ora_exception(OCIExtProcContext *ctx, char *msg)
+void ora_exception(EP_CONTEXT *c, char *msg)
 {
 	char str[1024];
 
-	EP_DEBUGF("IN ora_exception(%p, \"%s\")", ctx, msg);
+	EP_DEBUGF(c, "IN ora_exception(%p, \"%s\")", c, msg);
 	snprintf(str, 1023, "PERL EXTPROC ERROR: %s\n", msg);
-	OCIExtProcRaiseExcpWithMsg(ctx, ORACLE_USER_ERR, str, 0);
+	OCIExtProcRaiseExcpWithMsg(c->oci_context.ctx, ORACLE_USER_ERR, str, 0);
 }
 
-PerlInterpreter *pl_startup(void)
+/* convert colon-delimited inc_path to a "-Mlib=path1,path2" construct */
+/* this is easier than dealing with multiple "-I" flags */
+char *inc_path_to_mflag(EP_CONTEXT *c)
+{
+	char *p, *q, *flags = NULL;
+	int n = 0;
+
+	EP_DEBUGF(c, "IN inc_path_to_mflag(%p)", c);
+
+	if (c->inc_path == NULL) return NULL;
+
+	/* make volatile copy */
+	q = strdup(c->inc_path);
+
+	/* NEED TO MAKE THIS THREAD-SAFE WITH strtok_r */
+	for (p = strtok(q, ":") ; p ; p = strtok(NULL, ":")) {
+		if (n == 0) {
+			flags = OCIExtProcAllocCallMemory(c->oci_context.ctx, 4096);
+			*flags = '\0';
+			strcat(flags, "-Mlib=");
+		}
+		else {
+			strcat(flags, ",");
+		}
+		/* chance of overflow here -- should check bounds */
+		strcat(flags, p);
+		n++;
+	}
+
+	free(q);
+
+	EP_DEBUGF(c, "-- using mflag '%s'", flags);
+
+	return(flags);
+}
+
+PerlInterpreter *pl_startup(EP_CONTEXT *c)
 {
 	PerlInterpreter *p;
-	int argc;
-	char *argv[4];
+	int argc, n = 0;
+	char *argv[5], *mflag, bootcode[1024];
 	struct stat st;
-	SV *sv;
+	SV *evalsv;
 
 	dTHX;
 
-#ifdef EP_DEBUGGING
-	/* initialize ep_debug to a sane value */
-	if (ep_debugging != 1) {
-		ep_debugging = 0;
-	}
-#endif /* EP_DEBUGGING */
-	EP_DEBUG("IN pl_startup()");
+	EP_DEBUGF(c, "IN pl_startup(%p)", c);
+
 
 	/* create interpreter */
 	if((p = perl_alloc()) == NULL) {
-		EP_DEBUG("perl_alloc() failed!");
+		EP_DEBUG(c, "perl_alloc() failed!");
 		return(NULL);
 	}
-	PL_perl_destruct_level = 0;
-	perl_construct(p);
-	EP_DEBUGF("-- Perl interpreter created: p=%p", p);
 
-	/* parse bootstrap file if it exists */
-	if (!stat(BOOTSTRAP_FILE, &st)) {
-		EP_DEBUGF("-- Using bootstrap file '%s'", BOOTSTRAP_FILE);
-		argv[0] = "";
-#ifdef EP_TAINTING
-		argv[1] = "-T";
-		argv[2] = BOOTSTRAP_FILE;
-		argc = 3;
-#else
-		argv[1] = BOOTSTRAP_FILE;
-		argc = 2;
-#endif /* EP_TAINTING */
+	/* destroy EVERYTHING during during perl_destruct() */
+	PL_perl_destruct_level = 1;
+
+	perl_construct(p);
+	EP_DEBUGF(c, "-- Perl interpreter created: p=%p", p);
+
+	argv[0] = "";
+	if ((mflag = inc_path_to_mflag(c))) {
+		argv[1] = mflag;
+		n = 2;
 	}
 	else {
-		EP_DEBUG("-- No bootstrap file found.  Move along.");
-		argv[0] = "";
-#ifdef EP_TAINTING
-		argv[1] = "-T";
-		argv[2] = "-e";
-		argv[3] = "0";
-		argc = 4;
-#else
-		argv[1] = "-e";
-		argv[2] = "0";
-		argc = 3;
-#endif /* EP_TAINTING */
+		n = 1;
 	}
+	EP_DEBUG(c, "RETURN pl_startup");
+	if (c->tainting) {
+		argv[n] = "-T";
+		argv[n+1] = "-e";
+		argv[n+2] = "0";
+		argc = n+3;
+	}
+	else {
+		argv[n] = "-e";
+		argv[n+1] = "0";
+		argc = n+2;
+	}
+
+	if (argc == 2) EP_DEBUGF(c, "-- perl_parse argv: '%s'", argv[1]);
+	if (argc == 3) EP_DEBUGF(c, "-- perl_parse argv: '%s','%s'", argv[1], argv[2]);
+	if (argc == 4) EP_DEBUGF(c, "-- perl_parse argv: '%s','%s','%s'", argv[1], argv[2], argv[3]);
+	if (argc == 5) EP_DEBUGF(c, "-- perl_parse argv: '%s','%s','%s','%s'", argv[1], argv[2], argv[3], argv[4]);
 
 	if (!perl_parse(p, xs_init, argc, argv, NULL)) {
 		if (!perl_run(p)) {
-#if 0
-			load_module(aTHX_ PERL_LOADMOD_NOIMPORT,(SV*)newSVpv("ExtProc",0),Nullsv);
-#endif
-			EP_DEBUG("-- Bootstrapping successful!");
+			EP_DEBUGF(c, "-- using bootstrap file '%s'",
+				c->bootstrap_file);
+
+			if (c->use_namespace) {
+				snprintf(bootcode, 1024,
+					"package %s; use ExtProc::Code; do '%s'; package main;",
+					c->package, c->bootstrap_file);
+			}
+			else {
+				snprintf(bootcode, 1024, "use ExtProc::Code; do '%s';",
+					c->bootstrap_file);
+			}
+			if (c->use_namespace) {
+				EP_DEBUGF(c, "-- using namespace %s", c->package);
+			}
+			evalsv = eval_pv(bootcode, FALSE);
+			if (SvTRUE(ERRSV)) {
+				EP_DEBUGF(c, "FATAL: bootstrap failed: %s",
+					SvPV(ERRSV, PL_na));
+				return(NULL);
+			}
+
+			EP_DEBUG(c, "-- bootstrapping successful!");
 			return(p);
 		}
 	}
 	return(NULL);
 }
 
-void pl_shutdown(PerlInterpreter *p)
+void pl_shutdown(EP_CONTEXT *c)
 {
-	EP_DEBUGF("IN pl_shutdown(%p)", p);
-	perl_destruct(p);
-	perl_free(p);
+	EP_DEBUGF(c, "IN pl_shutdown(%p)", c);
+	perl_destruct(c->perl);
+	perl_free(c->perl);
 }
 
-static char *get_code(OCIExtProcContext *ctx, char *table, char *buf)
+/* called when extproc_perl.so is unloaded */
+void ep_fini(void)
 {
-	OCILobLocator *lobl;
-	char sql[MAX_SIMPLE_QUERY_SQL];
-	int buflen = MAX_SIMPLE_QUERY_RESULT;
+	EP_CONTEXT *c = &my_context;
 
-	EP_DEBUGF("IN get_code(%p, \"%s\", %p)", ctx, table, buf);
-	snprintf(sql, MAX_SIMPLE_QUERY_SQL - 18, "select code from %s", table);
-	simple_lob_query(ctx, sql, lobl, buf, &buflen, 0);
-	return(buf);
+	if (!c->perl) return;
+
+	/* call registered extproc_perl destructors -- don't die on error */
+	call_pv("ExtProc::destroy", G_VOID|G_EVAL);
+
+	/* shutdown debugging */
+	if (c->debug) {
+		EP_DEBUG(c, "STOP");
+		ep_debug_disable(c);
+	}
+
+	/* shutdown gracefully so we can call destructors and free memory */
+	pl_shutdown(&my_context);
 }
 
-static char *call_perl_sub(OCIExtProcContext *ctx, char *sub, char **args)
+static char *call_perl_sub(EP_CONTEXT *c, char *sub, char **args)
 {
 	STRLEN len;
 	int nret;
@@ -201,7 +309,7 @@ static char *call_perl_sub(OCIExtProcContext *ctx, char *sub, char **args)
 
 	dSP;
 
-	EP_DEBUGF("IN call_perl_sub(%p, \"%s\", ...)", ctx, sub);
+	EP_DEBUGF(c, "IN call_perl_sub(%p, \"%s\", ...)", c, sub);
 
 	/* push arguments onto stack */
 	ENTER;
@@ -210,32 +318,32 @@ static char *call_perl_sub(OCIExtProcContext *ctx, char *sub, char **args)
 	p = args;
 	while (*p) {
 		sv = sv_2mortal(newSVpv(*p++,0));
-#ifdef EP_TAINTING
-		SvTAINTED_on(sv);
-#endif EP_TAINTING
+		if (c->tainting) {
+			SvTAINTED_on(sv);
+		}
 		XPUSHs(sv);
 	}
 	PUTBACK;
 
 	/* run subroutine */
-	EP_DEBUG("-- about to call call_pv()");
+	EP_DEBUG(c, "-- about to call call_pv()");
 	nret = call_pv(sub, G_SCALAR|G_EVAL);
-	EP_DEBUGF("-- call_pv() returned %d", nret);
+	EP_DEBUGF(c, "-- call_pv() returned %d", nret);
 	SPAGAIN;
 
 	/* grab return value, detecting errors along the way */
 	if (SvTRUE(ERRSV) || nret != 1) {
-		EP_DEBUGF("-- ERRSV is defined: %s", SvPV(ERRSV, PL_na));
-		ora_exception(ctx, SvPV(ERRSV, PL_na));
+		EP_DEBUGF(c, "-- ERRSV is defined: %s", SvPV(ERRSV, PL_na));
+		ora_exception(c, SvPV(ERRSV, PL_na));
 		POPs;
 		retval = NULL;
 	}
 	else {
-		EP_DEBUG("-- No errors detected");
+		EP_DEBUG(c, "-- No errors detected");
 		sv = POPs;
 		tmp = SvPV(sv,len);
 		/* use oracle's memory allocation in case we're unloaded */
-		retval = OCIExtProcAllocCallMemory(ctx, len+1);
+		retval = OCIExtProcAllocCallMemory(c->oci_context.ctx, len+1);
 		Copy(tmp, retval, len, char);
 		retval[len] = '\0';
 	}
@@ -247,29 +355,103 @@ static char *call_perl_sub(OCIExtProcContext *ctx, char *sub, char **args)
 	return(retval);
 }
 
-/* entry point from oracle function */
+char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
+{
+	char *fqsub;
+	int status;
+	SV *codesv;
+
+	EP_DEBUGF(c, "IN parse_code(%p, %p, '%s')", c, code, sub);
+
+	/* create fully qualified subroutine name if it's not already */
+	if (c->use_namespace && !strchr(sub, ':')) {
+		fqsub = OCIExtProcAllocCallMemory(c->oci_context.ctx,
+			strlen(c->package) + strlen(sub) + 1);
+		snprintf(fqsub, 512, "%s::%s", c->package, sub);
+	}
+	else {
+		fqsub = sub;
+	}
+	EP_DEBUGF(c, "-- fully qualified sub name is '%s'", fqsub);
+
+	if (!get_cv(fqsub, FALSE)) {
+		/* load code -- fail silently if no code is available */
+		EP_DEBUG(c, "-- attempting to fetch code from database");
+		status = fetch_code(c, code, sub);
+		EP_DEBUG(c, "RETURN parse_code");
+		if (status != OCI_SUCCESS && status != OCI_SUCCESS_WITH_INFO) {
+			EP_DEBUG(c, "-- code fetch failed");
+			return(NULL);
+		}
+
+		/* parse code */
+		EP_DEBUG(c, "-- eval'ing fetched code");
+		TAINT_NOT;
+		if (c->use_namespace) {
+			ENTER;
+			codesv = sv_2mortal(newSVpv("package ", 0));
+			sv_catpvf(codesv, "%s;\n", c->package);
+			sv_catpv(codesv, code->code);
+			sv_catpv(codesv, "\npackage main;\n");
+			eval_sv(codesv, TRUE);
+			LEAVE;
+		}
+		else {
+			eval_pv(code->code, TRUE);
+		}
+		TAINT;
+
+		/* try again */
+		if (!get_cv(fqsub, FALSE)) {
+			EP_DEBUG(c, "-- still no valid CV");
+			return(NULL);
+		}
+	}
+
+	EP_DEBUG(c, "-- CV is cached");
+	return(fqsub);
+}
+
+/* 
+ * entry point from oracle function
+ * NOTE: use my_context here because we can't pass in our context from oracle
+ */
 char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 {
 	int status, n = 0;
 	va_list ap;
 	short ind;
-	char *args[MAXARGS], *retval, code[MAX_CODE_SIZE], *errbuf;
-	SV *evalsv;
+	char *args[128], *retval, *errbuf, *fqsub;
+	SV *evalsv, *codesv;
+	EP_CONTEXT *c;
+	EP_CODE code;
 
 	dTHX;
 
-	EP_DEBUGF("IN ora_perl_func(%p, %p, \"%s\", ...)", ctx, ret_ind, sub);
+	/* for macros */
+	c = &my_context;
 
-	/* set OCI context for ExtProc module */
-	this_ctx.ctx = ctx;
+	_ep_init(c, ctx);
 
-	/* new transaction, new extproc "connection" */
-	_connected = 0;
+	EP_DEBUGF(c, "IN ora_perl_func(%p, %p, \"%s\", ...)", ctx, ret_ind, sub);
+
+	c->subtype = EP_SUBTYPE_FUNCTION;
+
+	/* don't allow fully qualified subroutine name if package_subs is off */
+	/* exception is ExtProc::* */
+	if (strchr(sub, ':') && !c->package_subs) {
+		/* keep string compare inside the block for performance */
+		if (strncmp(sub, "ExtProc::", 9)) {
+			ora_exception(c, "invalid subroutine");
+			*ret_ind = OCI_IND_NULL;
+			return NULL;
+		}
+	}
 
 	/* grab arguments, NULL terminated */
 	va_start(ap, sub);
 
-	while (n < MAXARGS) {
+	while (n < c->max_sub_args) {
 		args[n] = va_arg(ap, char*);
 		ind = va_arg(ap, int);
 		if (ind == OCI_IND_NULL) {
@@ -280,191 +462,73 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	}
 	va_end(ap);
 
-	EP_DEBUGF("-- found %d argument(s)", n);
-
-#ifdef EP_DEBUGGING
-	/* check for debug request */
-	if (!strncmp(sub, "_enable_debug", 13)) {
-		if ((retval = ep_debug_enable(ctx))) {
-			*ret_ind = OCI_IND_NOTNULL;
-		}
-		else {
-			*ret_ind = OCI_IND_NULL;
-		}
-		return(retval);
-	}
-
-	if (!strncmp(sub, "_disable_debug", 14)) {
-		ep_debug_disable();
-		*ret_ind = OCI_IND_NULL;
-		return("\0");
-	}
-#endif /* DEBUGGING */
-
-	/* check for flush request */
-	if (!strncmp(sub, "_flush", 6)) {
-		/* only destroy the interpreter if it exists */
-		if (perl) {
-			pl_shutdown(perl);
-			perl = NULL;
-		}
-		*ret_ind = OCI_IND_NULL;
-		return("\0");
-	}
-
-	/* check for version request */
-	if (!strncmp(sub, "_version", 8)) {
-		char *version;
-		version = OCIExtProcAllocCallMemory(ctx, 255);
-		*version = '\0';
-		snprintf(version, 235, "extproc_perl-%s/Perl-%s",
-			EXTPROC_PERL_VERSION, PERL_VERSION_STRING);
-#ifdef EP_DEBUGGING
-		strncat(version, " DEBUGGING", 10);
-#endif
-#ifdef EP_TAINTING
-		strncat(version, " TAINTING", 9);
-#endif
-		*ret_ind = OCI_IND_NOTNULL;
-		return(version);
-	}
-
-	/* check for module list request */
-	if (!strncmp(sub, "_modules", 8)) {
-		*ret_ind = OCI_IND_NOTNULL;
-		return(STATIC_MODULES);
-	}
-
-	/* check for code table change */
-	if (!strncmp(sub, "_codetable", 10)) {
-		if (args[0]) {
-			strncpy(code_table, args[0], 255);
-		}
-		*ret_ind = OCI_IND_NOTNULL;
-		return(code_table);
-	}
+	EP_DEBUGF(c, "-- found %d argument(s)", n);
 
 	/* start perl interpreter if necessary */
-	if (!perl) {
-		perl = pl_startup();
-		if (!perl) {
+	if (!c->perl) {
+		c->perl = pl_startup(c);
+		EP_DEBUG(c, "RETURN ora_perl_func");
+		if (!c->perl) {
 			*ret_ind = OCI_IND_NULL;
-			ora_exception(ctx, "pl_startup failed -- check bootstrap file with 'perl -cw'");
-			return("\0");
+			ora_exception(c, "interpreter initialization failed");
+			return(NULL);
 		}
-		/* set code table if it hasn't been set already */
-		if (!strlen(code_table)) {
-			EP_DEBUGF("initializing code table to %s", CODE_TABLE);
-			strncpy(code_table, CODE_TABLE, 255);
-		}
+		EP_DEBUGF(c, "-- code table is %s", c->code_table);
 	}
 
-	/* the following special subs must be run AFTER the perl interpreter */
-	/* has been initialized */
-
-	/* check for request to load code from the database */
-	if (!strncmp(sub, "_preload", 8)) {
-		get_code(ctx, code_table, code);
-		TAINT_NOT;
-		eval_pv(code, TRUE);
-		TAINT;
+	fqsub = parse_code(c, &code, sub);
+	if (!fqsub) {
 		*ret_ind = OCI_IND_NULL;
-		return("\0");
+		ora_exception(c, "invalid subroutine");
+		return(NULL);
 	}
-
-	/* check for error message request */
-	if (!strncmp(sub, "_error", 6)) {
-		if (SvTRUE(ERRSV)) {
-			*ret_ind = OCI_IND_NOTNULL;
-			return(SvPV(ERRSV,PL_na));
-		}
-		else {
-			*ret_ind = OCI_IND_NULL;
-			return("\0");
-		}
-	}
-
-	/* check for errno request */
-	if (!strncmp(sub, "_errno", 6)) {
-		if (errno) {
-			errbuf = strerror(errno);
-			*ret_ind = OCI_IND_NOTNULL;
-			return(errbuf);
-		}
-		else {
-			*ret_ind = OCI_IND_NULL;
-			return("\0");
-		}
-	}
-
-	/* check for eval request */
-	if (!strncmp(sub, "_eval", 5)) {
-		evalsv = eval_pv(args[0], FALSE);
-		if (SvTRUE(ERRSV)) {
-			ora_exception(ctx, SvPV(ERRSV, PL_na));
-		}
-		*ret_ind = SvOK(evalsv) ? OCI_IND_NOTNULL : OCI_IND_NULL;
-		retval = SvPV(sv_2mortal(evalsv), PL_na);
-		return(retval);
-	}
-
-	/*
-	 * verify that the subroutine is valid (autoloading not supported)
-	 * try loading code from database if it isn't initially valid.
-	 */
-	if (!get_cv(sub, FALSE)) {
-		EP_DEBUG("-- CV does not exist, trying database...");
-		/* load code -- fail silently if no code is available */
-		get_code(ctx, code_table, code);
-
-		/* parse code */
-		EP_DEBUG("-- parsing code from database...");
-		TAINT_NOT;
-		eval_pv(code, TRUE);
-		TAINT;
-		EP_DEBUG("-- parsing successful");
-
-		/* try again */
-		if (!get_cv(sub, FALSE)) {
-			EP_DEBUG("-- CV STILL doesn't exist!");
-			*ret_ind = OCI_IND_NULL;
-			ora_exception(ctx, "invalid subroutine");
-			return("\0");
-		}
-		EP_DEBUG("-- CV exists!");
-	}
-
-	EP_DEBUG("-- CV is cached");
 
 	/* run subroutine */
-	retval = call_perl_sub(ctx, sub, args);
+	retval = call_perl_sub(c, fqsub, args);
 	*ret_ind = retval ? OCI_IND_NOTNULL : OCI_IND_NULL;
 
 	return(retval);
 }
 
-/* entry point from oracle procedure */
+/* 
+ * entry point from oracle procedure
+ * NOTE: use my_context here because we can't pass in our context from oracle
+ */
 void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 {
 	int status, n = 0;
 	va_list ap;
 	short ind;
-	char *args[MAXARGS], code[MAX_CODE_SIZE];
+	char *args[128], *fqsub;
+	EP_CONTEXT *c;
+	EP_CODE code;
+	SV *codesv;
 
 	dTHX;
 
-	EP_DEBUGF("IN ora_perl_proc(%p, \"%s\", ...)", ctx, sub);
+	/* for macros */
+	c = &my_context;
 
-	/* set OCI context for ExtProc module */
-	this_ctx.ctx = ctx;
+	_ep_init(c, ctx);
 
-	/* new transaction, new extproc "connection" */
-	_connected = 0;
+	EP_DEBUGF(c, "IN ora_perl_proc(%p, \"%s\", ...)", ctx, sub);
+
+	c->subtype = EP_SUBTYPE_PROCEDURE;
+
+	/* don't allow fully qualified subroutine name if package_subs is off */
+	/* exception is ExtProc::* */
+	if (strchr(sub, ':') && !c->package_subs) {
+		/* keep string compare inside the block for performance */
+		if (strncmp(sub, "ExtProc::", 9)) {
+			ora_exception(c, "invalid subroutine");
+			return;
+		}
+	}
 
 	/* grab arguments, NULL terminated */
 	va_start(ap, sub);
 
-	while (n < MAXARGS) {
+	while (n < c->max_sub_args) {
 		args[n] = va_arg(ap, char*);
 		ind = va_arg(ap, int);
 		if (ind == OCI_IND_NULL) {
@@ -475,97 +539,337 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 	}
 	va_end(ap);
 
-	EP_DEBUGF("-- found %d argument(s)", n);
-
-#ifdef EP_DEBUGGING
-	/* check for debug request */
-	if (!strncmp(sub, "_enable_debug", 13)) {
-		ep_debug_enable(ctx);
-		return;
-	}
-
-	if (!strncmp(sub, "_disable_debug", 14)) {
-		ep_debug_disable();
-		return;
-	}
-#endif /* EP_DEBUGGING */
-
-	/* check for flush request */
-	if (!strncmp(sub, "_flush", 6)) {
-		/* only destroy the interpreter if it exists */
-		if (perl) {
-			pl_shutdown(perl);
-			perl = NULL;
-		}
-		return;
-	}
-
-	/* check for code table change */
-	if (!strncmp(sub, "_codetable", 10)) {
-		if (args[0]) {
-			strncpy(code_table, args[0], 255);
-		}
-		else {
-			ora_exception(ctx, "can't return codetable from a procedure'");
-		}
-		return;
-	}
+	EP_DEBUGF(c, "-- found %d argument(s)", n);
 
 	/* start perl interpreter if necessary */
-	if (!perl) {
-		perl = pl_startup();
-		if (!perl) {
-			ora_exception(ctx, "pl_startup failed -- check bootstrap file with 'perl -cw'");
+	if (!c->perl) {
+		c->perl = pl_startup(c);
+		EP_DEBUG(c, "RETURN ora_perl_proc");
+		if (!c->perl) {
+			ora_exception(c, "interpreter initialization failed");
 			return;
 		}
-		/* set code table */
-		if (!strlen(code_table)) {
-			EP_DEBUGF("initializing code table to %s", CODE_TABLE);
-			strncpy(code_table, CODE_TABLE, 255);
-		}
+		EP_DEBUGF(c, "-- code table is %s", c->code_table);
 	}
 
-	/* the following special subs must be run AFTER the perl interpreter */
-	/* has been initialized */
-
-	/* check for request to load code from the database */
-	if (!strncmp(sub, "_preload", 8)) {
-		get_code(ctx, code_table, code);
-		TAINT_NOT;
-		eval_pv(code, TRUE);
-		TAINT;
+	fqsub = parse_code(c, &code, sub);
+	if (!fqsub) {
+		ora_exception(c, "invalid subroutine");
 		return;
-	}
-
-	/* check for eval request */
-	if (!strncmp(sub, "_eval", 5)) {
-		eval_pv(args[0], FALSE);
-		if (SvTRUE(ERRSV)) {
-			ora_exception(ctx, SvPV(ERRSV, PL_na));
-		}
-		return;
-	}
-
-	/*
-	 * verify that the subroutine is valid (autoloading not supported)
-	 * try loading code from database if it isn't initially valid.
-	 */
-	if (!get_cv(sub, FALSE)) {
-		/* load code -- fail silently if no code is available */
-		get_code(ctx, code_table, code);
-
-		/* parse code */
-		TAINT_NOT;
-		eval_pv(code, TRUE);
-		TAINT;
-
-		/* try again */
-		if (!get_cv(sub, FALSE)) {
-			ora_exception(ctx, "invalid subroutine");
-			return;
-		}
 	}
 
 	/* run subroutine */
-	call_perl_sub(ctx, sub, args);
+	call_perl_sub(c, fqsub, args);
+}
+
+/* Perl.version function */
+char *ora_perl_version(OCIExtProcContext *ctx, OCIInd *ret_ind)
+{
+	char *version;
+	EP_CONTEXT *c = &my_context;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_version(%p, %p)", ctx, ret_ind);
+
+	version = OCIExtProcAllocCallMemory(ctx, 255);
+	*version = '\0';
+	snprintf(version, 235, "extproc_perl-%s/Perl-%s",
+		EXTPROC_PERL_VERSION, PERL_VERSION_STRING);
+	*ret_ind = OCI_IND_NOTNULL;
+	return(version);
+}
+
+/* Perl.flush procedure */
+void ora_perl_flush(OCIExtProcContext *ctx)
+{
+	EP_CONTEXT *c = &my_context;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_flush(%p)", ctx);
+
+	/* only destroy the interpreter if it exists */
+	if (c->perl) {
+		/* call registered extproc_perl destructors */
+		call_pv("ExtProc::destroy", G_VOID|G_EVAL);
+
+		/* shut down interpreter */
+		pl_shutdown(c);
+		c->perl = NULL;
+	}
+	else {
+		ora_exception(c, "interpreter not started");
+	}
+}
+
+/* Perl.debug procedure */
+void ora_perl_debug(OCIExtProcContext *ctx, int enable)
+{
+	EP_CONTEXT *c = &my_context;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_debug(%p, %d)", ctx, enable);
+
+	if (enable) {
+		ep_debug_enable(c);
+		EP_DEBUG(c, "START");
+	}
+	else {
+		EP_DEBUG(c, "STOP");
+		ep_debug_disable(c);
+	}
+}
+
+/* Perl.debug_file function */
+char *ora_perl_debug_file(OCIExtProcContext *ctx, OCIInd *ret_ind)
+{
+	EP_CONTEXT *c = &my_context;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_debug_file(%p)", ctx);
+
+	if (c->debug_file) {
+		*ret_ind = OCI_IND_NOTNULL;
+		return(c->debug_file);
+	}
+	else {
+		*ret_ind = OCI_IND_NULL;
+		return NULL;
+	}
+}
+
+/* Perl.debug_status function */
+char *ora_perl_debug_status(OCIExtProcContext *ctx, OCIInd *ret_ind)
+{
+	EP_CONTEXT *c = &my_context;
+	char *res;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_debug_status(%p)", ctx);
+
+	res = OCIExtProcAllocCallMemory(ctx, 8);
+	if (c->debug) {
+		strcpy(res, "ENABLED");
+	}
+	else {
+		strcpy(res, "DISABLED");
+	}
+
+	*ret_ind = OCI_IND_NOTNULL;
+	return res;
+}
+
+/* Perl.package function */
+char *ora_perl_package(OCIExtProcContext *ctx, OCIInd *ret_ind)
+{
+	EP_CONTEXT *c = &my_context;
+	char *res;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_package(%p)", ctx);
+
+	if (c->use_namespace) {
+		*ret_ind = OCI_IND_NOTNULL;
+		res = strdup(c->package);
+	}
+	else {
+		*ret_ind = OCI_IND_NULL;
+		res = NULL;
+	}
+
+	return res;
+}
+
+/* Perl.errno function */
+char *ora_perl_errno(OCIExtProcContext *ctx, OCIInd *ret_ind)
+{
+	EP_CONTEXT *c = &my_context;
+	char *res;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_errno(%p)", ctx);
+
+	/* don't display errors unless perl interpreter has been started */
+	if (c->perl) {
+		res = strerror(errno);
+		*ret_ind = OCI_IND_NOTNULL;
+	}
+	else {
+		*ret_ind = OCI_IND_NULL;
+	}
+
+	return res;
+}
+
+/* Perl.errsv function */
+char *ora_perl_errsv(OCIExtProcContext *ctx, OCIInd *ret_ind)
+{
+	EP_CONTEXT *c = &my_context;
+	char *res;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_errsv(%p)", ctx);
+
+	/* don't display errors unless perl interpreter has been started */
+	if (c->perl) {
+		res = SvPV(ERRSV, PL_na);
+		*ret_ind = OCI_IND_NOTNULL;
+	}
+	else {
+		*ret_ind = OCI_IND_NULL;
+	}
+
+	return res;
+}
+
+char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCIInd *param_ind)
+{
+	EP_CONTEXT *c = &my_context;
+	char *res;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_config(%p)", ctx);
+
+	if (*param_ind == OCI_IND_NULL) {
+		ora_exception(c, "ora_perl_config: passed NULL parameter");
+		*ret_ind = OCI_IND_NULL;
+		return NULL;
+	}
+	res = OCIExtProcAllocCallMemory(ctx, 1024);
+
+	if (!strncmp(param, "tainting", 8)) {
+		if (c->tainting) {
+			strcpy(res, "ENABLED");
+		}
+		else {
+			strcpy(res, "DISABLED");
+		}
+		*ret_ind = OCI_IND_NOTNULL;
+	}
+	else if (!strncmp(param, "session_namespace", 17)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		if (c->use_namespace) {
+			strcpy(res, "ENABLED");
+		}
+		else {
+			strcpy(res, "DISABLED");
+		}
+	}
+	else if (!strncmp(param, "opcode_security", 15)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		if (c->opcode_security) {
+			strcpy(res, "ENABLED");
+		}
+		else {
+			strcpy(res, "DISABLED");
+		}
+	}
+	else if (!strncmp(param, "package_subs", 12)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		if (c->package_subs) {
+			strcpy(res, "ENABLED");
+		}
+		else {
+			strcpy(res, "DISABLED");
+		}
+	}
+	else if (!strncmp(param, "inc_path", 8)) {
+		if (c->inc_path == NULL) {
+			*ret_ind = OCI_IND_NULL;
+		}
+		else {
+			strcpy(res, c->inc_path);
+			*ret_ind = OCI_IND_NOTNULL;
+		}
+	}
+	else if (!strncmp(param, "bootstrap_file", 14)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		strcpy(res, c->bootstrap_file);
+	}
+	else if (!strncmp(param, "debug_directory", 22)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		strcpy(res, c->debug_dir);
+	}
+	else if (!strncmp(param, "trusted_code_directory", 22)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		strcpy(res, c->trusted_dir);
+	}
+	else if (!strncmp(param, "code_table", 10)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		strcpy(res, c->code_table);
+	}
+	else if (!strncmp(param, "max_code_size", 13)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		snprintf(res, 1024, "%d", c->max_code_size);
+	}
+	else if (!strncmp(param, "max_sub_args", 12)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		snprintf(res, 1024, "%d", c->max_sub_args);
+	}
+	else {
+		ora_exception(c, "ora_perl_config: unknown parameter");
+		*ret_ind = OCI_IND_NULL;
+	}
+
+	return res;
+}
+
+/* Perl.eval procedure */
+void ora_perl_eval(OCIExtProcContext *ctx, char *code)
+{
+	SV *codesv;
+	EP_CONTEXT *c = &my_context;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_eval(%p, '%s')", ctx, code);
+
+	if (c->tainting) {
+		ora_exception(c, "eval not supported in taint mode");
+		return;
+	}
+
+	if (c->use_namespace) {
+		ENTER;
+		codesv = sv_2mortal(newSVpv("package ", 0));
+		sv_catpvf(codesv, "%s;\n", c->package);
+		sv_catpv(codesv, code);
+		sv_catpv(codesv, "\npackage main;\n");
+		eval_sv(codesv, FALSE);
+		LEAVE;
+	}
+	else {
+		eval_pv(code, FALSE);
+	}
+	if (SvTRUE(ERRSV)) {
+		ora_exception(c, SvPV(ERRSV, PL_na));
+	}
 }

@@ -1,88 +1,25 @@
-$Id: README,v 1.26 2003/07/31 02:29:58 jeff Exp $
-
-Oracle Perl Procedure Library
-
-Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
-All rights reserved.
+$Id: README,v 1.2 2003/12/27 23:46:47 jeff Exp $
 
 extproc_perl enables Oracle stored procedures and functions to be written
-in Perl.  It uses Oracle 8's external procedure interface to create Perl
+in Perl.  It uses Oracle's external procedure interface to create Perl
 interpreters on the fly to execute Perl subroutines.  These interpreters
 are persistent throughout the life of the database session.
 
-A patch for DBD::Oracle is supplied that enables the use of DBI to make
-queries back to the calling database without establishing a new connection.
-
 Please send all bug reports, questions and suggestions to jeff@smashing.org.
 
-extproc_perl now has a home on the web: http://www.smashing.org/extproc_perl
+More information can be found at http://www.smashing.org/extproc_perl
 
 REQUIREMENTS
 ------------
-o Perl 5.005_62 or later (built and tested with 5.6.1)
-o shared libperl, non-threads enabled (threading perl crashes extproc_perl)
-o Oracle 8 server with OCI development libraries and headers (built and
-  tested with 8.1.7 -- may work with earlier versions)
-o DBI and DBD::Oracle 1.13 or later
+o A version of Solaris or Linux supported by Oracle
+o Perl 5.6.1 or later
+o shared libperl, threading disabled (threading perl crashes extproc_perl)
+o Oracle 8i (8.1.7 or later) or 9i server with OCI development libraries and
+  headers (problems have been reported with versions earlier than 8.1.7)
+o DBI and DBD::Oracle 1.14 or later
 
-BUILDING & INSTALLATION
------------------------
-This is quick and dirty, and is only meant to give a general overview of the
-installation process.  See the INSTALL file for more detailed information.
-
- 1) Set the ORACLE_HOME environment variable to the proper path.
- 2) perl Makefile.PL
- 3) Enter the list of Perl modules you'd like to support.
- 4) make -- This will build extproc_perl and the ExtProc Perl module.
- 5) Have your DBA start a listener for extproc connections.
- 6) make test -- This will run the optional test suite.
- 7) make install -- This will install the extproc_perl library, the ep utility,
-    and the ExtProc Perl module.
- 8) Run ep config to configure your database.
- 9) Create an optional bootstrap file.
-10) Use the "ep" command to import code into the database.
-
-PERSISTENCE
------------
-Any Perl interpreters created by extproc_perl are persistent for the life of
-the Oracle external procedure process.  According to Oracle documentation,
-this process should remain alive until the client process disconnects from
-the database.  This means that you will have persistence throughout any
-particular session, but neither the data nor the interpreter will persist
-beyond that session.
-
-CODE FETCHING STRATEGY
-----------------------
-extproc_perl will read the bootstrap file if it exists each time the Perl
-interpreter is started (after the first perl subroutine call and after each
-call to _flush).  If a call to an unknown Perl subroutine is made, extproc_perl
-will query the database for stored perl code.  If it finds code, it parses it
-and revalidates that subroutine.  If it now exists, the subroutine is run.
-Otherwise, the query fails with an "invalid subroutine" error message.
-
-This strategy ensures that bootstrap code will always be pre-loaded and
-that the database is only queried when necessary, eliminating any overhead
-associated with the query.  If needed, you can force extproc_perl to load the
-code from the database using the _preload special subroutine.
-
-SECURITY
---------
-If you enable taint checking during the configuration process, extproc_perl
-will taint all arguments to functions and procedures.  This is important
-becuase your code is running as the Oracle user, and can wreak havoc on a
-database server!
-
-BUGS & CAVEATS
---------------
-* Since modules bootstrap functions are statically compiled into the binary,
-  you must recompile in order to use any new modules installed since the last
-  compile.  This only applies to modules with shared object code (usually
-  compiled from C).
-
-* Syntax checking using "perl -cw" will fail if you use the Extproc module,
-  as it requires the extproc_perl library to be loaded.  Set the LD_PRELOAD
-  environment variable to the path of the library to check syntax in this case.
-
-* Code in bootstrap files is only available to databases local to that machine.
-  If you are running parallel server, you will either have to replicate
-  the bootstrap file across your servers or store your code in the database.
+DOCUMENTATION
+-------------
+There is a comprehensive user's guide available on the web at
+http://www.smashing.org/extproc_perl/userguide.html.  This is the official
+documentation for extproc_perl.

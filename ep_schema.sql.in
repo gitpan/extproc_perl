@@ -1,0 +1,39 @@
+-- $Id: ep_schema.sql.in,v 1.8 2003/12/27 22:52:17 jeff Exp $
+
+-- create code table
+CREATE TABLE -CODETABLE- (
+	name VARCHAR2(255) primary key,
+	language VARCHAR2(16),
+	last_modified_user VARCHAR2(255),
+	last_modified_date DATE,
+	code VARCHAR2(4000)
+);
+
+CREATE OR REPLACE VIEW perl_config AS (
+	select
+		Perl.config('bootstrap_file') as BOOTSTRAP_FILE,
+		Perl.config('code_table') as CODE_TABLE,
+		Perl.config('inc_path') as INC_PATH,
+		Perl.config('debug_directory') as DEBUG_DIRECTORY,
+		Perl.config('max_code_size') as MAX_CODE_SIZE,
+		Perl.config('max_sub_args') as MAX_SUB_ARGS,
+		Perl.config('trusted_code_directory') as TRUSTED_CODE_DIRECTORY,
+		Perl.config('tainting') as TAINTING,
+		Perl.config('session_namespace') as SESSION_NAMESPACE,
+		Perl.config('opcode_security') as OPCODE_SECURITY,
+		Perl.config('package_subs') as PACKAGE_SUBS
+	from dual
+);
+
+CREATE OR REPLACE VIEW perl_status AS (
+	select
+		Perl.version as EXTPROC_PERL_VERSION,
+		Perl.debug_status as DEBUG_STATUS,
+		Perl.debug_file as DEBUG_FILE,
+		Perl.package as PACKAGE,
+		Perl.errno as ERRNO,
+		Perl.errsv as ERRSV
+	from dual
+);
+
+show errors

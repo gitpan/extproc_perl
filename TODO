@@ -1,5 +1,6 @@
-$Id: TODO,v 1.15 2003/07/15 23:30:57 jeff Exp $
-
-* Opcode-level security (in addition to tainting)
-* More flexible argument & return value data types
-* Fix segfault when using threaded perl (no ETA)
+* opcode security
+* complete online user's guide
+* more utilities in ExtProc::Util
+* more config values for ExtProc::config()
+* autoload certain ExtProc subroutines to save on compile time
+* object oriented interface to subroutines (function & procedure methods, etc.)

@@ -1,0 +1,21 @@
+$Id: MANIFEST,v 1.6 2003/12/27 23:46:32 jeff Exp $
+
+COPYRIGHT
+Changes
+DBD-Oracle-1.14.patch
+INSTALL
+MANIFEST
+Makefile.PL
+README
+README.alpha
+THANKS
+TODO
+config.c
+ep_package.sql.in
+ep_schema.sql.in
+extproc_perl.c
+extproc_perl.conf.in
+extproc_perl.h
+gen_module_libs
+install-sh
+oci.c
