@@ -1,16 +1,18 @@
 # Oracle Perl Procedure Library
 #
-# Copyright (c) 2001 Jeff Horwitz (jeff@smashing.org).  All rights reserved.
+# Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+# All rights reserved.
+
 # This package is free software; you can redistribute it and/or modify it under
 # the same terms as Perl itself.
 
-# $Id: Makefile.PL,v 1.4 2001/08/15 19:25:28 jhorwitz Exp $
+# $Id: Makefile.PL,v 1.9 2002/11/20 20:46:11 jhorwitz Exp $
 
 # Makefile generator for extproc_perl
 
 use Config;
 
-my $DEFAULT_MODS = "IO Socket attrs";
+my $DEFAULT_MODS = "IO Socket attrs DBI DBD::Oracle";
 
 print "Verifying configuration...\n\n";
 
@@ -71,16 +73,37 @@ else {
 
 print <<_DONE_;
 
-extproc_perl requires a bootstrap file that contains the Perl subroutines
-that will be called from Oracle.
+extproc_perl can parse a global bootstrap file that contains Perl code shared
+by all sessions.  You can use it to store common subroutines or data, even
+system-specific data, as it lives in the file system rather than the database.
+If the file does not exist, there is no error -- all code will be read from
+the database.  If you do not want this feature enabled at all, specify
+/dev/null for the path below.
+
 _DONE_
 
-my $DEFAULT_BOOTSTRAP = "${oracle_home}/lib/ora_perl_boot.pl";
+my $DEFAULT_BOOTSTRAP = "${oracle_home}/lib/extproc_perl_boot.pl";
 print "Path to bootstrap file [${DEFAULT_BOOTSTRAP}]: ";
 my $bootfile = <STDIN>;
 chomp $bootfile;
 unless ($bootfile) {
 	$bootfile = $DEFAULT_BOOTSTRAP;
+}
+
+print <<_DONE_;
+
+extproc_perl will query the calling database for a Perl subroutine if it
+doesn't exist in the bootstrap file.  Specify the default table to query
+here.  You can change it dynamically using the special function _codetable.
+
+_DONE_
+
+my $DEFAULT_CODE_TABLE = "extproc_perl_code";
+print "Table to query [${DEFAULT_CODE_TABLE}]: ";
+my $code_table = <STDIN>;
+chomp $code_table;
+unless ($code_table) {
+	$code_table = $DEFAULT_CODE_TABLE;
 }
 
 my $CC = $Config{'cc'};
@@ -98,10 +121,10 @@ CC=${CC}
 LD=${LD}
 PERL=${perl}
 ORACLE_HOME=${oracle_home}
-CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DBOOTSTRAP_FILE=\\"${bootfile}\\"
 MODULES=ExtProc ${mods}
+CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\""
 
-OBJS=extproc_perl.o perlxsi.o ExtProc.o
+OBJS=extproc_perl.o perlxsi.o simple_query.o ExtProc.o
 
 all: extproc_perl.${dlext}
 

@@ -1,3 +1,5 @@
-$Id: TODO,v 1.6 2001/08/31 15:36:49 jhorwitz Exp $
+$Id: TODO,v 1.8 2002/11/22 20:15:06 jhorwitz Exp $
 
-* Store Perl code inside the database
+* Work toward 1.0 release
+* ATTEMPT to integrate data and/or interpreter persistence across sessions
+* Add in security, including tainting and opcode-level

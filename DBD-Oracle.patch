@@ -30,16 +30,16 @@ diff -Nuar DBD-Oracle-1.08.orig/dbdimp.c DBD-Oracle-1.08/dbdimp.c
  	ub4 init_mode = OCI_OBJECT;
  	SV **init_mode_sv;
 +	if (is_extproc) {
-+		svp = DBD_ATTRIB_GET_SVP(attr, "context", 7);
-+		if (!svp) croak("pointer to context SV is NULL");
++		svp = DBD_ATTRIB_GET_SVP(attr, "ora_context", 11);
++		if (!svp) croak("pointer to ora_context SV is NULL");
 +		if (sv_isa(*svp, "ExtProc::OCIExtProcContext")) {
 +			IV tmp = SvIV((SV*)SvRV(*svp));
 +			this_ctx = (struct OCIExtProcContext *)tmp;
 +		}
 +		else {
-+			croak("context value is not of type ExtProc::OCIExtProcContext");
++			croak("ora_context value is not of type ExtProc::OCIExtProcContext");
 +		}
-+		if (this_ctx == NULL) croak("context value is NULL");
++		if (this_ctx == NULL) croak("ora_context value is NULL");
 +		status = OCIExtProcGetEnv(this_ctx,
 +			&imp_drh->envhp,
 +			&imp_dbh->svchp,

@@ -1,10 +1,12 @@
 # Oracle Perl Procedure Library
 #
-# Copyright (c) 2001 Jeff Horwitz (jeff@smashing.org).  All rights reserved.
+# Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+# All rights reserved.
+#
 # This package is free software; you can redistribute it and/or modify it under
 # the same terms as Perl itself.
 
-# $Id: Makefile.PL,v 1.1 2001/08/15 18:24:59 jhorwitz Exp $
+# $Id: Makefile.PL,v 1.2 2002/11/18 01:29:43 jhorwitz Exp $
 
 use ExtUtils::MakeMaker;
 

@@ -62,6 +62,19 @@ for the next query.
 
 Reports the version of the currently loaded extproc_perl.
 
+=item _modules()
+
+Returns a space separated list of modules that were requested to be statically
+linked into extproc_perl.
+
+=item _codetable(table_name)
+
+Sets or returns the database table queried for code.
+
+=item _error()
+
+Returns the most recent error string.
+
 =back
 
 =head1 AUTHOR

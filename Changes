@@ -1,4 +1,19 @@
-$Id: Changes,v 1.3 2001/08/31 15:42:19 jhorwitz Exp $
+$Id: Changes,v 1.9 2002/11/22 19:22:28 jhorwitz Exp $
+
+0.94	Fri Nov 22 13:58:08 EST 2002
+	* Renamed "context" attribute to "ora_context" in DBD::Oracle patch
+	  on Tim Bunce's suggestion
+	* Retrieve code from database in addition to bootstrap file
+	* Query database for code when get_cv fails
+	* Bootstrap file is now optional
+	* _codetable() special subroutine sets or returns database table
+	  that is queried for code
+	* _modules() special subroutine returns statically linked modules
+	* _error() special subroutine returns most recent error string
+	* Rewrote ExtProc module convenience functions to use OCI simple_query
+	  interface.  This removes the DBI dependency of the ExtProc module,
+          which was a performance hit on initial load.
+	* Wrote "ep" script to import and export code from a database.
 
 0.93	Fri Aug 31 11:16:39 EDT 2001
 	* Wrote patch for DBD-Oracle to work inside an external procedure

@@ -25,3 +25,10 @@ PARAMETERS (
 /
 
 show errors
+
+CREATE TABLE extproc_perl_code (
+	code CLOB
+);
+/
+
+show errors

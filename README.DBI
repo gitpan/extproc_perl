@@ -1,11 +1,14 @@
-$Id: README.DBI,v 1.2 2001/08/31 17:27:40 jhorwitz Exp $
+$Id: README.DBI,v 1.5 2002/11/19 20:53:49 jhorwitz Exp $
 
 It may be useful to query the calling database from an external Perl procedure.
 Since DBI is the standard Perl module for database access, it makes sense to
 use it, along with the DBD::Oracle driver, to connect back to the database.
 Support for external procedures is not included with the current version of
-DBI (1.08 as of this writing), so we supply a patch for that version.  Here's
-how to apply it:
+DBI (1.08 as of this writing), so we supply a patch for that version.  
+
+NOTE: External procedure support will be integrated into DBD::Oracle 1.13.
+
+Here's how to apply the patch:
 
 1) Verify the DBD::Oracle distribution is in the DBD-Oracle-1.08 directory.
 2) run: chmod 644 DBD-Oracle-1.08/dbdimp.c
@@ -35,7 +38,7 @@ The example below is from the ExtProc module documentation:
 
  # connect back to the calling database
  my $dbh = DBI->connect("dbi:Oracle:extproc", "", "",
-            { 'context' => $ctx });
+            { 'ora_context' => $context });
 
 If you are connecting to another database, one which did NOT call the external
 procedure, just use DBI as you normally would.

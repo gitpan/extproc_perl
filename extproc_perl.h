@@ -1,20 +1,23 @@
 /*
  * Oracle Perl Procedure Library
  *
- * Copyright (c) 2001 Jeff Horwitz (jeff@smashing.org).  All rights reserved.
+ * Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+ * All rights reserved.
+ *
  * This package is free software; you can redistribute it and/or modify it
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.h,v 1.3 2001/08/15 14:47:57 jhorwitz Exp $ */
+/* $Id: extproc_perl.h,v 1.10 2002/11/18 01:22:33 jhorwitz Exp $ */
 
-#ifndef ORAPERLSUB_H
-#define ORAPERLSUB_H
+#ifndef EXTPROC_PERL_H
+#define EXTPROC_PERL_H
 
-#define MY_SUCCESS      0
-#define MY_FAILED       1
-#define MAXARGS         32
-#define ORACLE_USER_ERR	20100
+#define	MAXARGS			32
+#define	ORACLE_USER_ERR		20100
+#define MAX_SIMPLE_QUERY_RESULT	8192
+#define MAX_SIMPLE_QUERY_SQL	256
+#define MAX_CODE_SIZE		8192 /* <= MAX_SIMPLE_QUERY_RESULT */
 
 struct ocictx {
 	OCIEnv *envhp;		/* For OCI Environment Handle */
@@ -35,4 +38,6 @@ void xs_init(void);
 
 void ora_exception(OCIExtProcContext *, char *);
 
-#endif /* ORAPERLSUB_H */
+int simple_query(OCIExtProcContext *, char *, char *, int);
+
+#endif /* EXTPROC_PERL_H */
