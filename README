@@ -1,4 +1,4 @@
-$Id: README,v 1.24 2003/05/22 20:23:48 jeff Exp $
+$Id: README,v 1.26 2003/07/31 02:29:58 jeff Exp $
 
 Oracle Perl Procedure Library
 
@@ -30,23 +30,17 @@ BUILDING & INSTALLATION
 This is quick and dirty, and is only meant to give a general overview of the
 installation process.  See the INSTALL file for more detailed information.
 
- 1) Set the ORACLE_HOME environment variable to the proper path
+ 1) Set the ORACLE_HOME environment variable to the proper path.
  2) perl Makefile.PL
- 3) Enter the list of Perl modules you'd like to support
+ 3) Enter the list of Perl modules you'd like to support.
  4) make -- This will build extproc_perl and the ExtProc Perl module.
- 5) make install -- This will install the ExtProc Perl module.
- 6) Copy the extproc_perl library (name is platform-dependent, but it's
-    probably extproc_perl.so) to a location that an Oracle process can
-    access.
- 7) Create a bootstrap file containing common Perl data and subroutines.
-
-For more details on steps 8 - 10, see the extproc_sample.sql file.
-
- 8) Have your DBA create an Oracle function that references the code in the
-    library.  see extproc_sample.sql for sample code.
- 9) Create a table in the database to store your code.
-10) Have your DBA start a listener for extproc connections.
-11) Use the "ep" command to import code into the database.
+ 5) Have your DBA start a listener for extproc connections.
+ 6) make test -- This will run the optional test suite.
+ 7) make install -- This will install the extproc_perl library, the ep utility,
+    and the ExtProc Perl module.
+ 8) Run ep config to configure your database.
+ 9) Create an optional bootstrap file.
+10) Use the "ep" command to import code into the database.
 
 PERSISTENCE
 -----------
@@ -80,9 +74,10 @@ database server!
 
 BUGS & CAVEATS
 --------------
-* Since modules are statically compiled into the binary, you must recompile
-  in order to use any new modules installed since the last compile.  This
-  only applies to modules with shared object code (usually compiled from C).
+* Since modules bootstrap functions are statically compiled into the binary,
+  you must recompile in order to use any new modules installed since the last
+  compile.  This only applies to modules with shared object code (usually
+  compiled from C).
 
 * Syntax checking using "perl -cw" will fail if you use the Extproc module,
   as it requires the extproc_perl library to be loaded.  Set the LD_PRELOAD

@@ -1,4 +1,4 @@
-# $Id: 01version.t,v 1.3 2003/07/20 17:29:07 jeff Exp $
+# $Id: 01version.t,v 1.4 2003/07/30 20:15:35 jeff Exp $
 
 print "1..2\n";
 
@@ -18,7 +18,7 @@ my $sth = $dbh->prepare("select test_perl('_version') from dual");
 $sth->execute();
 my $res = ($sth->fetchrow_array)[0];
 $sth->finish;
-if ($res =~ /^extproc_perl \d+\.\d+/) {
+if ($res =~ /^extproc_perl-\d+\.\d+/) {
 	print "ok 2\n";
 }
 else {

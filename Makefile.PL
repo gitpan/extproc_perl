@@ -3,7 +3,7 @@
 # Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
 
-# $Id: Makefile.PL,v 1.24 2003/07/20 17:26:56 jeff Exp $
+# $Id: Makefile.PL,v 1.26 2003/07/31 22:03:03 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -38,9 +38,13 @@ my $perl_version = $Config{'version'};
 # what is the extension for shared libraries?
 my $dlext = $Config{'dlext'};
 
+# where to install scripts
+my $script_bin = $Config{'installscript'};
+
 # set some defaults
 $DEFAULT_MODS = "IO Socket attrs Fcntl DBI DBD::Oracle";
-$DEFAULT_BOOTSTRAP = "${oracle_home}/lib/extproc_perl_boot.pl";
+$DEFAULT_LIBPATH = "${oracle_home}/lib";
+$DEFAULT_BOOTSTRAP = "${DEFAULT_LIBPATH}/extproc_perl_boot.pl";
 $DEFAULT_CODE_TABLE = "extproc_perl_code";
 $DEFAULT_DEBUGGING = "no";
 $DEFAULT_TAINTING = "yes";
@@ -72,6 +76,13 @@ unless ($mods) {
 }
 if ($mods =~ /^\+(.*)/) {
 	$mods = "$DEFAULT_MODS $1";
+}
+
+print "Where should I install the extproc_perl library [${DEFAULT_LIBPATH}]: ";
+my $libpath = <STDIN>;
+chomp $libpath;
+unless ($libpath) {
+	$libpath = $DEFAULT_LIBPATH;
 }
 
 print <<_DONE_;
@@ -196,6 +207,7 @@ print "Writing configuration cache...\n";
 open(FILE, ">.config") or die $!;
 print FILE <<_DONE_;
 \$DEFAULT_MODS = '$mods';
+\$DEFAULT_LIBPATH = '$libpath';
 \$DEFAULT_BOOTSTRAP = '$bootfile';
 \$DEFAULT_CODE_TABLE = '$code_table';
 \$DEFAULT_DEBUGGING = '$debugging';
@@ -228,7 +240,7 @@ CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_
 
 OBJS=extproc_perl.o perlxsi.o simple_query.o
 
-all: extproc_perl.${dlext}
+all: extproc_perl.${dlext} ep
 
 perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
@@ -243,19 +255,21 @@ ExtProc.a: extproc_perl.h ExtProc/ExtProc.xs
 extproc_perl.${dlext}: \$(OBJS) ExtProc.a
 	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) `PERL=\$(PERL) sh gen_module_libs \${MODULES}` ExtProc.a
 
+ep:	ep.in
+	\$(PERL) -p -e 's#\\\@PERL\\\@#\$(PERL)#' ep.in > ep && chmod 555 ep
+	
 install: all
+	cp extproc_perl.${dlext} ${libpath} && chmod 555 ${libpath}/extproc_perl.${dlext}
+	cp ep ${script_bin} && chmod 555 ${script_bin}/ep
 	(cd ExtProc ; \$(MAKE) install)
-	\@echo " "
-	\@echo "*** You should now copy extproc_perl.${dlext} to a convenient location."
-	\@echo "*** You will specify the path to this file in your SQL library definition."
 
 clean:
-	rm -f *.o extproc_perl.${dlext} ExtProc.a perlxsi.c Makefile t/eptest.pl
+	rm -f *.o extproc_perl.${dlext} ep ExtProc.a perlxsi.c Makefile t/eptest.pl
 	(cd ExtProc ; \$(MAKE) clean)
 
-distclean:
-	rm -f *.o extproc_perl.${dlext} perlxsi.c Makefile Makefile.old .config
-	(cd ExtProc ; \$(MAKE) realclean)
+distclean: clean
+	rm -f Makefile.old .config
+	(cd ExtProc ; \$(MAKE) realclean ; rm -f Makefile.old)
 
 test:	all
 	PERL_DL_NONLAZY=1 \$(PERL) -e 'use Test::Harness qw(&runtests); runtests \@ARGV;' t/*.t

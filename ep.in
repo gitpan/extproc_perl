@@ -1,0 +1,247 @@
+#!@PERL@
+
+# $Id: ep.in,v 1.5 2003/07/31 22:09:54 jeff Exp $
+
+# Oracle Perl Procedure Library
+
+# Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
+# All rights reserved.
+
+
+use DBI;
+my $EP_LIBRARY_NAME = 'PERL_LIB';
+my $EP_FUNCTION_NAME = 'perl';
+my $EP_PROCEDURE_NAME = 'perl_p';
+
+sub usage
+{
+	print STDERR <<_DONE_;
+usage: ep export <database> <table>
+       ep import <database> <table> <file>
+       ep config <database> <table> <path-to-library>
+_DONE_
+}
+         
+sub get_userpass
+{
+	print STDERR "Username: ";
+	my $username = <STDIN>;
+	chomp($username);
+	print STDERR "Password: ";
+	system("stty -echo");
+	my $password = <STDIN>;
+	chomp($password);
+	system("stty echo");
+	print STDERR "\n";
+	return ($username, $password);
+}
+
+my $cmd = shift @ARGV;
+
+if ($cmd eq 'import') {
+	if ($#ARGV != 2) {
+		usage();
+		exit(1);
+	}
+
+	my ($db, $table, $file) = @ARGV;
+
+	print STDERR "Importing code to $table in $db\n";
+
+	my ($username,$password) = get_userpass();
+
+	open(FILE, $file) or die $!;
+	my ($l, $buf);
+	while (defined($l = <FILE>)) {
+		$buf .= $l;
+	}
+	close(FILE);
+
+	# escape single quotes for oracle
+	$buf =~ s/'/''/g;
+
+	my $dbh = DBI->connect("dbi:Oracle:$db", $username, $password,
+		{ AutoCommit => 0 });
+	unless ($dbh) {
+		die "connection to $db failed: $DBI::errstr";
+	}
+
+	my $sql = "delete from $table";
+	$dbh->do($sql) or die $dbh->errstr;
+	$sql = "insert into $table (CODE) values ('$buf')";
+	unless ($dbh->do($sql)) {
+		$dbh->rollback();
+		die $dbh->errstr;
+	}
+
+	$dbh->commit();
+
+	$dbh->disconnect();
+
+	print STDERR "Code successfully imported.\n";
+}
+
+elsif ($cmd eq 'export') {
+	if ($#ARGV != 1) {
+		usage();
+		exit(1);
+	}
+
+	my ($db, $table) = @ARGV;
+
+	print STDERR "Exporting code from $table in $db.\n";
+
+	my ($username,$password) = get_userpass();
+	my $dbh = DBI->connect("dbi:Oracle:$db", $username, $password);
+	unless ($dbh) {
+		die "connection to $db failed: $DBI::errstr";
+	}
+
+	my $sql = "select code from $table";
+	$dbh->{LongReadLen} = 8192;
+	my $sth = $dbh->prepare($sql);
+	$sth or die $dbh->errstr;
+	die $dbh->errstr unless ($sth->execute());
+	if ($sth->rows > 1) {
+		$dbh->disconnect();
+		die "more than one row found in $table";
+	}
+	my $h = $sth->fetchrow_hashref();
+	$sth->finish();
+
+	print STDOUT ${$h}{'CODE'};
+
+	$dbh->disconnect();
+
+	print STDERR "Code successfully exported.\n";
+}
+elsif ($cmd eq 'config') {
+	if ($#ARGV != 2) {
+		usage();
+		exit(1);
+	}
+
+	my ($db, $table, $libpath) = @ARGV;
+	my ($username,$password) = get_userpass();
+	my $sql_create_lib = qq {
+CREATE OR REPLACE LIBRARY $EP_LIBRARY_NAME IS '$libpath'
+	};
+
+	my $sql_create_func = qq {
+CREATE OR REPLACE FUNCTION $EP_FUNCTION_NAME (
+   sub IN VARCHAR2, arg1 in VARCHAR2 default NULL, arg2 in VARCHAR2 default NULL, arg3 in VARCHAR2 default NULL, dummy in VARCHAR2 default NULL)
+RETURN STRING AS
+EXTERNAL NAME "ora_perl_func"
+LIBRARY "$EP_LIBRARY_NAME"
+WITH CONTEXT
+PARAMETERS (
+   CONTEXT,
+   RETURN INDICATOR BY REFERENCE,
+   sub string,
+   arg1 string,
+   arg1 INDICATOR short,
+   arg2 string,
+   arg2 INDICATOR short,
+   arg3 string,
+   arg3 INDICATOR short,
+   dummy string,
+   dummy INDICATOR short);
+	};
+
+	my $sql_create_proc = qq {
+CREATE OR REPLACE PROCEDURE $EP_PROCEDURE_NAME (sub IN VARCHAR2, arg1 in VARCHAR2 default NULL, arg2 in VARCHAR2 default NULL, arg3 in VARCHAR2 default NULL, dummy in VARCHAR2 default NULL) AS
+EXTERNAL NAME "ora_perl_proc"
+LIBRARY "$EP_LIBRARY_NAME"
+WITH CONTEXT
+PARAMETERS (
+	  CONTEXT,
+          sub string,
+          arg1 string,
+          arg1 INDICATOR short,
+          arg2 string,
+          arg2 INDICATOR short,
+          arg3 string,
+          arg3 INDICATOR short,
+          dummy string,
+          dummy INDICATOR short);
+	};
+
+	my $sql_create_table = qq { CREATE TABLE $table ( code CLOB ) };
+
+	my $dbh = DBI->connect("dbi:Oracle:$db", $username, $password,
+		{ AutoCommit => 0, RaiseError => 0, PrintError => 0 });
+	unless ($dbh) {
+		die "connection to $db failed: $DBI::errstr";
+	}
+	defined($dbh->do($sql_create_lib)) or die $dbh->errstr;
+	defined($dbh->do($sql_create_func)) or die $dbh->errstr;
+	defined($dbh->do($sql_create_proc)) or die $dbh->errstr;
+	unless (defined($dbh->do($sql_create_table))) {
+		die $dbh->errstr if ($dbh->err != 955);
+	}
+
+	$dbh->commit();
+
+	$dbh->disconnect();
+
+	print "Database $db successfully configured!\n\n";
+	print "Oracle Library: $EP_LIBRARY_NAME\n";
+	print "C Library: $libpath\n";
+	print "Function: $EP_FUNCTION_NAME\n";
+	print "Procedure: $EP_PROCEDURE_NAME\n";
+	print "Code Table: $table\n";
+}
+
+else {
+	usage();
+	exit(1);
+}
+
+exit(0);
+
+__END__
+
+=head1 NAME
+
+ep - extproc_perl Configuration Utility
+
+=head1 SYNOPSIS
+
+ep import <database> <code table> <filename>
+
+ep export <database> <code table>
+
+ep config <database> <code table> <library>
+
+=head1 DESCRIPTION
+
+The ep command configures a database for use with extproc_perl.  The first
+argument is a subcommand that tells ep what you want to do.
+
+import <database> <code table> <filename>
+
+Imports the code in filename into the specified code table.  This will overwrite
+existing code in the code table.
+
+export <database> <code table>
+
+Exports the code in the specified code table to STDOUT.  Redirect this into a
+file of your choosing to edit it.
+
+config <database> <code table> <library>
+
+Creates the libraries, functions, procedures, and tables that support
+extproc_perl.  Run this once after you install extproc_perl.  The code table
+should be what you specified in the configuration, unless you want to configure
+a different code table.  The library is the path to the extproc_perl.so file.
+
+=head1 AUTHOR
+
+Jeff Horwitz <jeff@smashing.org>
+
+=head1 SEE ALSO
+
+perl(1), perlembed(1), DBI(3), ExtProc(3)
+
+=cut
+

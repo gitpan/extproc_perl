@@ -3,7 +3,7 @@
 # Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
 
-# $Id: ExtProc.pm,v 1.23 2003/07/15 21:42:49 jeff Exp $
+# $Id: ExtProc.pm,v 1.24 2003/07/30 19:01:55 jeff Exp $
 
 package ExtProc;
 
@@ -24,7 +24,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 bootstrap ExtProc $VERSION;
 

@@ -1,4 +1,4 @@
-$Id: INSTALL,v 1.13 2003/07/20 17:52:42 jeff Exp $
+$Id: INSTALL,v 1.15 2003/07/31 02:30:55 jeff Exp $
 
 INSTALLATION PROCEDURE
 
@@ -91,7 +91,8 @@ INSTALLATION PROCEDURE
         )
       )
 
-    See your DBA if you don't understand this.
+    Reload the TNS listener by typing "lsnrctl reload".  See your DBA if you
+    don't understand this.
 
 13) Type 'make test' to execute the test suite.  You will need privileges to
     create tables, libraries, functions, and procedures in your schema.  See
@@ -101,28 +102,58 @@ INSTALLATION PROCEDURE
     linked.  You MUST uninstall this module for the tests to work.  See
     README.testing for details.
 
-14) Type 'make install' to install the ExtProc Perl module.  ExtProc provides
-   a Perl interface to some Oracle internal data structures and a cursory
-   query interface (not yet available via Perl).
+14) Type 'make install' to install the extproc_perl library, the ep utility,
+    and theExtProc Perl module.  ExtProc provides a Perl interface to some
+    Oracle internal data structures and works with DBD::Oracle to provide
+    access to your database via DBI.
 
-15) Copy the extproc_perl shared object (probably extproc_perl.so) to a
-    location that an Oracle process can access.  This should probably not be
-    on an NFS mounted partition.  $ORACLE_HOME/lib might be appropriate.
+15) Create a bootstrap file if necessary.  See step 6 for details.
 
-16) Create a bootstrap file if necessary.  See step 6 for details.
+16) Use ep config to configure your database for extproc_perl:
 
-NOTE: STEPS 17 - 20 MAY REQUIRE ADMINISTRATIVE ACCESS TO YOUR ORACLE DATABASE
+    ep config database code-table path-to-library
 
-**************************************************************************
+    EXAMPLE:
+    ep config db1 extproc_perl_code /oracle/lib/extproc_perl.so
 
-NOTE: If the extproc_sample.sql file is in your current working directory,
-STEPS 17 through 20 can be performed by running this command from sqlplus:
+17) Use the "ep" command to import code from a file into the database as
+    follows:
 
-SQL> @extproc_sample
+    ep import dbname tablename file
 
-**************************************************************************
+    Enter your username and password for the database and your code will be
+    imported into the table you specify, assuming you have the appropriate
+    privileges on that table.
 
-17) In Oracle, define a library to be used for external procedures.  It should
+    Note that importing is destructive, as it will wipe out the contents of
+    the code table before inserting.  You should always export code from the
+    database to a file, make your changes there, and import that file.  Export
+    code from a database as follows:
+
+    ep export dbname tablename > file
+
+    By default, "ep export" will print to STDOUT, so you'll need to redirect
+    its output to a file to edit the code.
+
+    extproc_perl_code is the default table extproc_perl will query for code.
+    You can change this on the fly with the _codetable function from PL/SQL
+    as follows:
+
+    exec perl('_codetable', 'newtable');
+
+That's it!
+
+*******************************************************************************
+
+The "ep config" command creates an Oracle library named PERL_LIB, a function
+named perl, a procedure named perl_p, and a code table named extproc_perl_code.
+If you would like to change these, or otherwise configure your database
+manually, follow the procedure below.  You can find sample PL/SQL code in
+extproc_sample.sql
+
+*******************************************************************************
+
+ 1) In Oracle, define a library to be used for external procedures.  It should
     look like this:
 
    CREATE OR REPLACE LIBRARY PERL_LIB IS
@@ -130,7 +161,7 @@ SQL> @extproc_sample
 
    Substitute the real path to the extproc_perl library.
 
-18) Create the 'perl' function -- this will be the programmer's interface
+ 2) Create the 'perl' function -- this will be the programmer's interface
     to Perl from Oracle.  It will call the function ora_perl_func from the
     PERL_LIB library defined above.  ora_perl_func provides a generic hook
     into the Perl interpreter, and is defined as follows: 
@@ -217,7 +248,7 @@ SQL> @extproc_sample
 
     select myfunc('a','b') from dual;
 
-19) Create the perl_p procedure, which allows you to call a Perl subroutine
+ 3) Create the perl_p procedure, which allows you to call a Perl subroutine
     as a procedure instead of a function.  This is important if you need
     to perform updates of the database from extproc_perl -- you can't do
     that from a function.
@@ -244,34 +275,9 @@ SQL> @extproc_sample
           dummy INDICATOR short);
 /
 
-20) Create the code table as follows (substitute your own table for the table
+ 4) Create the code table as follows (substitute your own table for the table
     name in this example):
 
      CREATE TABLE extproc_perl_code (
              code CLOB
      );
-
-21) Use the "ep" command to import code from a file into the database as
-    follows:
-
-    ./ep import dbname tablename file
-
-    Enter your username and password for the database and your code will be
-    imported into the table you specify, assuming you have the appropriate
-    privileges on that table.
-
-    Note that importing is destructive, as it will wipe out the contents of
-    the code table before inserting.  You should always export code from the
-    database to a file, make your changes there, and import that file.  Export
-    code from a database as follows:
-
-    ./ep export dbname tablename > file
-
-    By default, "ep export" will print to STDOUT, so you'll need to redirect
-    its output to a file to edit the code.
-
-    extproc_perl_code is the default table extproc_perl will query for code.
-    You can change this on the fly with the _codetable function from PL/SQL
-    as follows:
-
-    exec perl('_codetable', 'newtable');

@@ -5,7 +5,7 @@
  * All rights reserved.
  */
 
-/* $Id: extproc_perl.c,v 1.47 2003/07/20 17:27:22 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.49 2003/07/30 20:15:06 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.02"
+#define EXTPROC_PERL_VERSION	"1.03"
 
 #define PERL_NO_GET_CONTEXT
 
@@ -317,7 +317,7 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 		char *version;
 		version = OCIExtProcAllocCallMemory(ctx, 255);
 		*version = '\0';
-		snprintf(version, 235, "extproc_perl %s/Perl %s",
+		snprintf(version, 235, "extproc_perl-%s/Perl-%s",
 			EXTPROC_PERL_VERSION, PERL_VERSION_STRING);
 #ifdef EP_DEBUGGING
 		strncat(version, " DEBUGGING", 10);
