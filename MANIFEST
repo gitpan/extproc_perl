@@ -1,4 +1,4 @@
-# $Id: MANIFEST,v 1.9 2004/02/24 21:59:15 jeff Exp $
+# $Id: MANIFEST,v 1.10 2004/04/12 19:21:42 jeff Exp $
 COPYRIGHT
 Changes
 INSTALL
@@ -16,6 +16,7 @@ extproc_perl.conf.in
 extproc_perl.h
 gen_module_libs
 install-sh
+migrate-1_99_07.sql.in
 oci.c
 test.pl
 testcode.c

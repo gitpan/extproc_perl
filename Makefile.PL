@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.30 2004/03/02 19:48:43 jeff Exp $
+# $Id: Makefile.PL,v 1.34 2004/04/12 19:14:10 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -255,18 +255,21 @@ CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_
 OBJS=extproc_perl.o oci.o config.o
 TESTOBJS=testcode.o
 XSIOBJS=perlxsi.o
-CONFS=extproc_perl.conf ep_package.sql ep_schema.sql
+CONFS=extproc_perl.conf ep_package.sql ep_schema.sql migrate-1_99_07.sql
 
-all: extproc_perl.${dlext} extproc_perl.conf ep_schema.sql ep_package.sql
+all: extproc_perl.${dlext} \$(CONFS)
 
 extproc_perl.conf: extproc_perl.conf.in
-	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%; s%-CODETABLE-%$code_table%; s%-INSTPATH-%$instpath%; s%-TRUSTEDDIR-%$trusted_dir%;' extproc_perl.conf.in > \$@
+	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%g; s%-CODETABLE-%$code_table%g; s%-INSTPATH-%$instpath%g; s%-TRUSTEDDIR-%$trusted_dir%g;' extproc_perl.conf.in > \$@
 
 ep_package.sql: ep_package.sql.in
-	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%; s%-CODETABLE-%$code_table%; s%-INSTPATH-%$instpath%;' ep_package.sql.in > \$@
+	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%g; s%-CODETABLE-%$code_table%g; s%-INSTPATH-%$instpath%g;' ep_package.sql.in > \$@
 
 ep_schema.sql: ep_schema.sql.in
-	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%; s%-CODETABLE-%$code_table%; s%-INSTPATH-%$instpath%;' ep_schema.sql.in > \$@
+	\$(PERL) -p -e 's%-BOOTSTRAP-%$bootfile%g; s%-CODETABLE-%$code_table%g; s%-INSTPATH-%$instpath%g;' ep_schema.sql.in > \$@
+
+migrate-1_99_07.sql: migrate-1_99_07.sql.in
+	\$(PERL) -p -e 's%-CODETABLE-%$code_table%g;' migrate-1_99_07.sql.in > \$@
 
 perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
