@@ -1,12 +1,9 @@
 # Oracle Perl Procedure Library
 #
-# Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+# Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
 
-# This package is free software; you can redistribute it and/or modify it under
-# the same terms as Perl itself.
-
-# $Id: Makefile.PL,v 1.10 2003/04/10 18:18:44 jeff Exp $
+# $Id: Makefile.PL,v 1.18 2003/05/22 19:42:28 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -27,6 +24,12 @@ if ($Config{'useshrplib'} ne 'yes' && $Config{'useshrplib'} ne 'true') {
 	die "A shared libperl is required to build this distribution."
 } 
 print "You are using a shared libperl.  Good.\n";
+
+# verify we are NOT using a threads-enabled perl
+if ($Config{'usethreads'} eq 'define') {
+	die "Threads-enabled Perl is not supported in this version.";
+}
+print "You are not using a threads-enabled Perl.  Good.\n";
 
 # what is the path to perl?
 my $perl = $Config{'perlpath'};
@@ -110,9 +113,46 @@ unless ($code_table) {
 	$code_table = $DEFAULT_CODE_TABLE;
 }
 
+print <<_DONE_;
+
+The extproc_perl internal debugger will log various internal activities and
+allow you to view STDERR output from your code.  This is not recommended for
+production installations, as there is a performance penalty.
+
+_DONE_
+
+my $DEFAULT_DEBUGGING = "no";
+print "Would you like to enable debugging (yes/no) [${DEFAULT_DEBUGGING}]? ";
+my $debugging = <STDIN>;
+chomp $debugging;
+unless ($debugging) {
+	$debugging = $DEFAULT_DEBUGGING;
+}
+my $DEBUG_DEF = ($debugging =~ /^y/i) ? "-DEP_DEBUGGING" : "";
+
+print <<_DONE_;
+
+extproc_perl can enable taint checking which will taint all arguments to
+functions and procedures.  Since your code will run as the same user that runs
+the Oracle database, this is HIGHLY recommended for production environments.
+If you're just experimenting with extproc_perl, you probably don't need this.
+See the perlsec(1) man page for more information on tainting.
+
+_DONE_
+
+my $DEFAULT_TAINTING = "yes";
+print "Would you like to enable taint checks (yes/no) [${DEFAULT_TAINTING}]? ";
+my $tainting = <STDIN>;
+chomp $tainting;
+unless ($tainting) {
+	$tainting = $DEFAULT_TAINTING;
+}
+my $TAINTING_DEF = ($debugging =~ /^y/i) ? "-DEP_TAINTING" : "";
+
 my $CC = $Config{'cc'};
 my $LD = $Config{'ld'};
 my $LDDLFLAGS = $Config{'lddlflags'};
+my $OPT = $Config{'optimize'};
 
 print "\nWriting Makefile...\n";
 
@@ -123,10 +163,11 @@ print FILE <<_DONE_;
 
 CC=${CC}
 LD=${LD}
+OPT=${OPT}
 PERL=${perl}
 ORACLE_HOME=${oracle_home}
 MODULES=ExtProc ${mods}
-CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\""
+CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\"" $DEBUG_DEF $TAINTING_DEF
 
 OBJS=extproc_perl.o perlxsi.o simple_query.o ExtProc.o
 
@@ -140,7 +181,7 @@ ExtProc.o: extproc_perl.h ExtProc/ExtProc.xs
 	cp -f ExtProc/ExtProc.o .
 
 .c.o:
-	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` -c \$<
+	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
 
 extproc_perl.${dlext}: \$(OBJS)
 	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) `PERL=\$(PERL) sh gen_module_libs \${MODULES}`
@@ -161,5 +202,5 @@ distclean:
 _DONE_
 
 print "Configuring ExtProc module\n";
-system("cd ExtProc ; ${perl} Makefile.PL");
+system("cd ExtProc ; ${perl} Makefile.PL DEFINE='${DEBUG_DEF} ${TAINTING_DEF}'");
 print "Done.\n";

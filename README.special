@@ -1,4 +1,4 @@
-$Id: README.special,v 1.7 2003/04/14 20:16:16 jeff Exp $
+$Id: README.special,v 1.8 2003/05/22 15:54:51 jeff Exp $
 
 The following subroutines are reserved for extproc_perl and may be called
 like any other Perl subroutine from Oracle.
@@ -18,3 +18,9 @@ _error() -- Returns the most recent error string.
 _errno() -- Returns the most recent system error message ($! in Perl).
 
 _preload() -- Force extproc_perl to load code from the database immediately.
+
+_eval(code) -- Execute raw code in an eval block and return its return value
+
+_enable_debug() -- Enable debugging and return path to log file.
+
+_disable_debug() -- Disable debugging.

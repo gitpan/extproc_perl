@@ -1,12 +1,9 @@
-$Id: README,v 1.21 2003/04/22 02:00:34 jeff Exp $
+$Id: README,v 1.24 2003/05/22 20:23:48 jeff Exp $
 
 Oracle Perl Procedure Library
 
-Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 All rights reserved.
-
-This package is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
 
 extproc_perl enables Oracle stored procedures and functions to be written
 in Perl.  It uses Oracle 8's external procedure interface to create Perl
@@ -73,6 +70,13 @@ This strategy ensures that bootstrap code will always be pre-loaded and
 that the database is only queried when necessary, eliminating any overhead
 associated with the query.  If needed, you can force extproc_perl to load the
 code from the database using the _preload special subroutine.
+
+SECURITY
+--------
+If you enable taint checking during the configuration process, extproc_perl
+will taint all arguments to functions and procedures.  This is important
+becuase your code is running as the Oracle user, and can wreak havoc on a
+database server!
 
 BUGS & CAVEATS
 --------------

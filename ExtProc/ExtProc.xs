@@ -1,14 +1,11 @@
 /*
  * Oracle Perl Procedure Library
  *
- * Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+ * Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
  * All rights reserved.
- *
- * This package is free software; you can redistribute it and/or modify it
- * under the same terms as Perl itself.
  */
 
-/* $Id: ExtProc.xs,v 1.7 2003/04/22 01:39:52 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.9 2003/05/22 16:38:47 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,3 +114,14 @@ user()
 	PPCODE:
 	simple_query(this_ctx.ctx, sql, res, 0);
 	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
+
+#ifdef EP_DEBUGGING
+
+void
+ep_debug(msg)
+	char *msg;
+
+	CODE:
+	ep_debug(msg);
+
+#endif /* EP_DEBUGGING */

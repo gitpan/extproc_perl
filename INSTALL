@@ -1,4 +1,4 @@
-$Id: INSTALL,v 1.9 2003/04/16 15:03:24 jeff Exp $
+$Id: INSTALL,v 1.11 2003/05/22 19:48:39 jeff Exp $
 
 INSTALLATION PROCEDURE
 
@@ -53,22 +53,40 @@ INSTALLATION PROCEDURE
    so prepend the schema to the table name or create a public synonym if you
    want to use a central code table.
 
-8) The Makefile should have been written after the previous step.  Type 'make'
-   to build extproc_perl and the ExtProc Perl module.
+8) Choose whether or not to enable debugging facilities.  If you choose 'yes',
+   code will be included to log various internal activiies to a log file.  It
+   will also redirect STDERR from your Perl code to this file.  You can turn
+   debugging on and off with the _enable_debug and _disable_debug subroutines
+   respectively.  If you choose 'no', this code will not be included and you
+   will not be able to use the debugging facilities.  It is recommended to
+   disable debugging for production environments, as there is a slight
+   performance hit.
 
-9) Type 'make install' to install the ExtProc Perl module.  ExtProc provides
+9) Choose whether or not to enable Perl taint checks.  This is a VERY powerful
+   security feature that can prevent malformed arguments to stored procedures
+   from affecting anything outside of your Perl code.  If you enable this
+   feature, you should be familiar with Perl's taint mode.  See the perlsec(1)
+   man page for more information.
+
+   NOTE: If you enable taint mode, it is on forever -- there is no switch to
+   selectively turn it on or off.
+
+10) The Makefile should have been written after the previous step.  Type 'make'
+    to build extproc_perl and the ExtProc Perl module.
+
+11) Type 'make install' to install the ExtProc Perl module.  ExtProc provides
    a Perl interface to some Oracle internal data structures and a cursory
    query interface (not yet available via Perl).
 
-10) Copy the extproc_perl shared object (probably extproc_perl.so) to a location
-   that an Oracle process can access.  This should probably not be on an NFS
-   mounted partition.  $ORACLE_HOME/lib might be appropriate.
+12) Copy the extproc_perl shared object (probably extproc_perl.so) to a
+    location that an Oracle process can access.  This should probably not be
+    on an NFS mounted partition.  $ORACLE_HOME/lib might be appropriate.
 
-11) Create a bootstrap file if necessary.  See step 6 for details.
+13) Create a bootstrap file if necessary.  See step 6 for details.
 
-NOTE: STEPS 12 - 14 MAY REQUIRE ADMINISTRATIVE ACCESS TO YOUR ORACLE DATABASE
+NOTE: STEPS 14 - 16 MAY REQUIRE ADMINISTRATIVE ACCESS TO YOUR ORACLE DATABASE
 
-12) Define a listener for the external procedure process.  In your
+14) Define a listener for the external procedure process.  In your
     tnsnames.ora file, it should look something like this:
 
     extproc_connection_data =
@@ -85,13 +103,13 @@ NOTE: STEPS 12 - 14 MAY REQUIRE ADMINISTRATIVE ACCESS TO YOUR ORACLE DATABASE
 **************************************************************************
 
 NOTE: If the extproc_sample.sql file is in your current working directory,
-STEPS 13 through 16 can be performed by running this command from sqlplus:
+STEPS 15 through 18 can be performed by running this command from sqlplus:
 
 SQL> @extproc_sample
 
 **************************************************************************
 
-13) In Oracle, define a library to be used for external procedures.  It should
+15) In Oracle, define a library to be used for external procedures.  It should
     look like this:
 
    CREATE OR REPLACE LIBRARY PERL_LIB IS
@@ -99,7 +117,7 @@ SQL> @extproc_sample
 
    Substitute the real path to the extproc_perl library.
 
-14) Create the 'perl' function -- this will be the programmer's interface
+16) Create the 'perl' function -- this will be the programmer's interface
     to Perl from Oracle.  It will call the function ora_perl_func from the
     PERL_LIB library defined above.  ora_perl_func provides a generic hook
     into the Perl interpreter, and is defined as follows: 
@@ -186,7 +204,7 @@ SQL> @extproc_sample
 
     select myfunc('a','b') from dual;
 
-15) Create the perl_p procedure, which allows you to call a Perl subroutine
+17) Create the perl_p procedure, which allows you to call a Perl subroutine
     as a procedure instead of a function.  This is important if you need
     to perform updates of the database from extproc_perl -- you can't do
     that from a function.
@@ -213,14 +231,14 @@ SQL> @extproc_sample
           dummy INDICATOR short);
 /
 
-16) Create the code table as follows (substitute your own table for the table
+18) Create the code table as follows (substitute your own table for the table
     name in this example):
 
      CREATE TABLE extproc_perl_code (
              code CLOB
      );
 
-17) Use the "ep" command to import code from a file into the database as
+19) Use the "ep" command to import code from a file into the database as
     follows:
 
     ./ep import dbname tablename file

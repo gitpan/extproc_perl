@@ -16,7 +16,7 @@ select perl('sub1','1','2') from dual;
 
 =over 4
 
-exec perl('sub2','arg1');
+exec perl_p('sub2','arg1');
 
 =back
 
@@ -83,6 +83,18 @@ Returns the most recent system error message ($! in Perl).
 
 Force extproc_perl to load code from the database immediately.
 
+=item _eval(code)
+
+Execute raw code in an eval block and return its return value.
+
+=item _enable_debug()
+
+Enable debugging and return path to log file.
+
+=item _disable_debug()
+
+Disable debugging.
+
 =back
 
 =head1 DBI CALLBACKS
@@ -131,12 +143,20 @@ Again, an Oracle restriction.
 
 =back
 
+=head1 SECURITY
+
+If you enabled taint mode during the configuration of extproc_perl, all
+arguments to functions and procedures will be tainted before they are passed
+to Perl subroutines.  This is HIGHLY recommended for environments in which you
+do not trust the content of the arguments, such as web form data.  See the
+perlsec(1) man page for more information on Perl's taint mode.
+
 =head1 AUTHOR
 
 Jeff Horwitz <jeff@smashing.org>
 
 =head1 SEE ALSO
 
-perl(1), perlembed(1), ExtProc(3)
+perl(1), perlembed(1), perlsec(1), ExtProc(3)
 
 =cut

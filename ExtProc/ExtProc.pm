@@ -1,12 +1,9 @@
 # Oracle Perl Procedure Library
 #
-# Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+# Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
-#
-# This package is free software; you can redistribute it and/or modify it under
-# the same terms as Perl itself.
 
-# $Id: ExtProc.pm,v 1.17 2003/04/22 01:40:23 jeff Exp $
+# $Id: ExtProc.pm,v 1.20 2003/05/22 16:38:47 jeff Exp $
 
 package ExtProc;
 
@@ -22,11 +19,12 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	&DATABASE_NAME
 	&USER
 	&SESSIONID
+	&ep_debug
 ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '0.97';
+our $VERSION = '1.0';
 
 bootstrap ExtProc $VERSION;
 
@@ -100,7 +98,7 @@ Throws a user-defined Oracle exception.  Note that the Perl subroutine will
 probably complete after this function is called, but no return values should
 be accepted by the calling client.
 
-=item context (DEPRECATED)
+=item context -- DEPRECATED
 
 If you are familiar with the pre-0.97 method of using DBI callbacks, see
 dbi_connect for more information.
@@ -116,6 +114,10 @@ dbi_connect for more information.
 NOTE: External procedures are stateless, so there is no concept of a persistent
 connection to the database.  Therefore, you must run the DBI->connect method
 once per transaction.
+
+=item ep_debug(message)
+
+If debugging is enabled, write the specified message to the debug log.
 
 =back
 

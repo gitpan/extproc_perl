@@ -1,7 +1,6 @@
-$Id: TODO,v 1.12 2003/04/22 01:46:05 jeff Exp $
+$Id: TODO,v 1.13 2003/05/22 15:32:55 jeff Exp $
 
-* NEXT RELEASE IS 1.0!
-* Add in security, including tainting and opcode-level (planned for 1.0)
+* Opcode-level security (in addition to tainting)
 * ATTEMPT to integrate data and/or interpreter persistence across sessions
   (no ETA)
 * Fix segfault when using threaded perl (no ETA)

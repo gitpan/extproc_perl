@@ -1,14 +1,11 @@
 /*
  * Oracle Perl Procedure Library
  *
- * Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+ * Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
  * All rights reserved.
- *
- * This package is free software; you can redistribute it and/or modify it
- * under the same terms as Perl itself.
  */
 
-/* $Id: simple_query.c,v 1.6 2003/04/22 01:41:19 jeff Exp $ */
+/* $Id: simple_query.c,v 1.7 2003/05/22 16:37:22 jeff Exp $ */
 
 #include <oci.h>
 #include <EXTERN.h>

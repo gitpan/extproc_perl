@@ -1,4 +1,16 @@
-$Id: Changes,v 1.13 2003/04/22 01:45:07 jeff Exp $
+$Id: Changes,v 1.14 2003/05/22 20:25:21 jeff Exp $
+
+1.0	Thu May 22 16:24:50 EDT 2003
+	* UPDATED LICENSE -- commercial redistribution requires approval
+	* _eval function returns proper return value from code
+	* Added internal debugging facility
+	* Added _enable_debug and _disable_debug special subroutines to toggle
+	  debugging status
+	* STDERR is redirected to log file when debugging is enabled
+	* Added appropriate CC optimization flags during compilation
+	* New option to enable taint checks
+	* Makefile.PL now checks for threads-enabled Perl
+	* Makefile.PL asks about enabling debugging
 
 0.97	Mon Apr 21 21:25:31 EDT 2003
 	* New DBD::Oracle patch allows passing of existing handles in place
