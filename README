@@ -1,4 +1,4 @@
-$Id: README,v 1.19 2003/04/16 15:03:24 jeff Exp $
+$Id: README,v 1.21 2003/04/22 02:00:34 jeff Exp $
 
 Oracle Perl Procedure Library
 
@@ -26,7 +26,7 @@ o Perl 5.005_62 or later (built and tested with 5.6.1)
 o shared libperl, non-threads enabled (threading perl crashes extproc_perl)
 o Oracle 8 server with OCI development libraries and headers (built and
   tested with 8.1.7 -- may work with earlier versions)
-o DBI and DBD::Oracle 1.08 or later.  Needed for the "ep" command.
+o DBI and DBD::Oracle 1.13 or later
 
 BUILDING & INSTALLATION
 -----------------------
@@ -71,9 +71,8 @@ Otherwise, the query fails with an "invalid subroutine" error message.
 
 This strategy ensures that bootstrap code will always be pre-loaded and
 that the database is only queried when necessary, eliminating any overhead
-associated with the query.  If needed (see POD documentation), you can force
-extproc_perl to load the code from the database using the _preload special
-subroutine.
+associated with the query.  If needed, you can force extproc_perl to load the
+code from the database using the _preload special subroutine.
 
 BUGS & CAVEATS
 --------------

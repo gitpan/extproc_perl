@@ -6,7 +6,7 @@
 # This package is free software; you can redistribute it and/or modify it under
 # the same terms as Perl itself.
 
-# $Id: ExtProc.pm,v 1.16 2003/04/14 17:50:44 jeff Exp $
+# $Id: ExtProc.pm,v 1.17 2003/04/22 01:40:23 jeff Exp $
 
 package ExtProc;
 
@@ -26,13 +26,40 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '0.96';
+our $VERSION = '0.97';
 
 bootstrap ExtProc $VERSION;
 
 sub DATABASE_NAME { database_name(@_); }
 sub USER { user(@_); }
 sub SESSIONID { sessionid(@_); }
+
+# wrapper around DBI->connect so we don't call OCIExtProcGetEnv twice
+# expects DBI to be loaded already
+sub dbi_connect
+{
+	my $dbh;
+
+	if (_is_connected()) {
+		$dbh = DBI->connect('dbi:Oracle:extproc', '', '',
+			{ 'ora_context' => context(),
+			  'ora_envhp' => _envhp(),
+			  'ora_svchp' => _svchp(),
+			  'ora_errhp' => _errhp()
+			}
+		);
+	}
+	else {
+		$dbh = DBI->connect('dbi:Oracle:extproc', '', '',
+			{ 'ora_context' => context() } );
+
+		# need to set this even if we fail, cuz GetEnv should succeed
+		# even if the connect fails -- a little risky, but what the hay
+		_connected_on();
+	}
+
+	return $dbh;
+}
 
 1;
 __END__
@@ -73,29 +100,22 @@ Throws a user-defined Oracle exception.  Note that the Perl subroutine will
 probably complete after this function is called, but no return values should
 be accepted by the calling client.
 
-=item context
+=item context (DEPRECATED)
 
-Returns an OCIExtProcContext object for use with DBI->connect.  When connecting
-to the database that called the external procedure, use the database name
-'extproc', and supply no username or password.  Pass the context returned by
-this function to the DBI->connect method by defining 'ora_context' in the
-attributes parameter.  Use the standard DBI method of connecting when using
-another database.  An example follows:
+If you are familiar with the pre-0.97 method of using DBI callbacks, see
+dbi_connect for more information.
 
+=item dbi_connect()
 
  use DBI;
  use ExtProc;
 
- # get the current OCI context
- my $context = ExtProc::context;
-
  # connect back to the calling database
- my $dbh = DBI->connect("dbi:Oracle:extproc", "", "",
-            { 'ora_context' => $context });
+ my $dbh = ExtProc->dbi_connect();
 
 NOTE: External procedures are stateless, so there is no concept of a persistent
 connection to the database.  Therefore, you must run the DBI->connect method
-before each query.  This may be automated in the future.
+once per transaction.
 
 =back
 

@@ -8,31 +8,61 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: simple_query.c,v 1.5 2003/04/11 15:40:02 jeff Exp $ */
+/* $Id: simple_query.c,v 1.6 2003/04/22 01:41:19 jeff Exp $ */
 
 #include <oci.h>
+#include <EXTERN.h>
+#include <perl.h>
 #include "extproc_perl.h"
 
+extern ocictx this_ctx;
+extern int _connected;
+
+/* int ep_OCIExtProcGetEnv(OCIExtProcContext *ctx)
+ * wrapper around oracle's OCIExtProcGetEnv
+ * we can't call getenv twice in the same transaction, so we need to save
+ * our handles for later use by DBI
+ */
+int ep_OCIExtProcGetEnv(OCIExtProcContext *ctx)
+{
+	int err;
+
+	dTHX;
+
+	if (!_connected) {
+		err = OCIExtProcGetEnv(ctx, &this_ctx.envhp,
+			&this_ctx.svchp, &this_ctx.errhp);
+		if (err == OCI_SUCCESS || err == OCI_SUCCESS_WITH_INFO) {
+			/* be VERY careful here with threading
+			   when it's supported */
+			this_ctx.ctx = ctx;
+			_connected = 1;
+		}
+	}
+	else {
+		err = OCI_SUCCESS;
+	}
+	return(err);
+}
+
+/* used for ExtProc module convenience functions */
 int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 {
-	ocictx oci_ctx;
-	ocictx *oci_ctxp = &oci_ctx;
 	OCIDefine *def1;
 	text out[MAX_SIMPLE_QUERY_RESULT];
 	int err;
 	
-	err = OCIExtProcGetEnv(ctx,
-		&oci_ctxp->envhp,
-		&oci_ctxp->svchp,
-		&oci_ctxp->errhp);
+	ocictx *this_ctxp = &this_ctx;
+
+	err = ep_OCIExtProcGetEnv(ctx);
 
 	if (err) {
 		ora_exception(ctx,"getenv");
 		return(err);
 	}
 
-	err = OCIHandleAlloc(oci_ctxp->envhp,
-		(dvoid **)&oci_ctxp->stmtp,
+	err = OCIHandleAlloc(this_ctxp->envhp,
+		(dvoid **)&this_ctxp->stmtp,
 		OCI_HTYPE_STMT,
 		0,
 		0);
@@ -42,8 +72,8 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 		return(err);
 	}
 
-	err = OCIStmtPrepare(oci_ctxp->stmtp,
-		oci_ctxp->errhp,
+	err = OCIStmtPrepare(this_ctxp->stmtp,
+		this_ctxp->errhp,
 		(text *) sql,
 		strlen(sql),
 		OCI_NTV_SYNTAX,
@@ -54,9 +84,9 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 		return(err);
 	}
 
-	err = OCIStmtExecute(oci_ctxp->svchp,
-		oci_ctxp->stmtp,
-		oci_ctxp->errhp,
+	err = OCIStmtExecute(this_ctxp->svchp,
+		this_ctxp->stmtp,
+		this_ctxp->errhp,
 		0,
 		0,
 		NULL,
@@ -70,9 +100,9 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 		return(err);
 	}
 
-	err = OCIDefineByPos(oci_ctxp->stmtp,
+	err = OCIDefineByPos(this_ctxp->stmtp,
 		&def1,
-		oci_ctxp->errhp,
+		this_ctxp->errhp,
 		1,
 		&out,
 		256,
@@ -82,8 +112,8 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 		(dvoid *) 0,
 		OCI_DEFAULT);
 
-	err = OCIStmtFetch(oci_ctxp->stmtp,
-		oci_ctxp->errhp,
+	err = OCIStmtFetch(this_ctxp->stmtp,
+		this_ctxp->errhp,
 		1,
 		OCI_FETCH_NEXT,
 		OCI_DEFAULT);
@@ -97,7 +127,7 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 
 	strncpy(res, out, MAX_SIMPLE_QUERY_RESULT);
 
-	err = OCIHandleFree(oci_ctxp->stmtp, OCI_HTYPE_STMT);
+	err = OCIHandleFree(this_ctxp->stmtp, OCI_HTYPE_STMT);
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
 		if (!silent) {
 			ora_exception(ctx,"OCIHandleFree");
@@ -108,26 +138,23 @@ int simple_query(OCIExtProcContext *ctx, char *sql, char *res, int silent)
 	return(0);
 }
 
+/* this one is used to fetch code from the database */
 int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, char *buf, int *buflen, int silent)
 {
-	ocictx oci_ctx;
-	ocictx *oci_ctxp = &oci_ctx;
+	ocictx *this_ctxp = &this_ctx;
 	OCIDefine *def1;
 	int err, loblen, amtp;
 	boolean flag;
 	
-	err = OCIExtProcGetEnv(ctx,
-		&oci_ctxp->envhp,
-		&oci_ctxp->svchp,
-		&oci_ctxp->errhp);
+	err = ep_OCIExtProcGetEnv(ctx);
 
 	if (err) {
 		ora_exception(ctx,"getenv");
 		return(err);
 	}
 
-	err = OCIHandleAlloc(oci_ctxp->envhp,
-		(dvoid **)&oci_ctxp->stmtp,
+	err = OCIHandleAlloc(this_ctxp->envhp,
+		(dvoid **)&this_ctxp->stmtp,
 		OCI_HTYPE_STMT,
 		0,
 		0);
@@ -137,8 +164,8 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 		return(err);
 	}
 
-	err = OCIStmtPrepare(oci_ctxp->stmtp,
-		oci_ctxp->errhp,
+	err = OCIStmtPrepare(this_ctxp->stmtp,
+		this_ctxp->errhp,
 		(text *) sql,
 		strlen(sql),
 		OCI_NTV_SYNTAX,
@@ -149,11 +176,11 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 		return(err);
 	}
 
-	err = OCIDescriptorAlloc(oci_ctxp->envhp, (dvoid *)&lobl, OCI_DTYPE_LOB, 0, 0);
+	err = OCIDescriptorAlloc(this_ctxp->envhp, (dvoid *)&lobl, OCI_DTYPE_LOB, 0, 0);
 
-	err = OCIDefineByPos(oci_ctxp->stmtp,
+	err = OCIDefineByPos(this_ctxp->stmtp,
 		&def1,
-		oci_ctxp->errhp,
+		this_ctxp->errhp,
 		1,
 		&lobl,
 		-1,
@@ -163,9 +190,9 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 		(dvoid *) 0,
 		OCI_DEFAULT);
 
-	err = OCIStmtExecute(oci_ctxp->svchp,
-		oci_ctxp->stmtp,
-		oci_ctxp->errhp,
+	err = OCIStmtExecute(this_ctxp->svchp,
+		this_ctxp->stmtp,
+		this_ctxp->errhp,
 		1,
 		0,
 		NULL,
@@ -179,7 +206,7 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 		return(err);
 	}
 
-	err = OCIHandleFree(oci_ctxp->stmtp, OCI_HTYPE_STMT);
+	err = OCIHandleFree(this_ctxp->stmtp, OCI_HTYPE_STMT);
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
 		if (!silent) {
 			ora_exception(ctx,"OCIHandleFree");
@@ -187,7 +214,7 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 		return(err);
 	}
 
-	err = OCILobLocatorIsInit(oci_ctxp->envhp, oci_ctxp->errhp, lobl, &flag);
+	err = OCILobLocatorIsInit(this_ctxp->envhp, this_ctxp->errhp, lobl, &flag);
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
 		if (!silent) {
 			ora_exception(ctx,"OCILobLocatorIsInit");
@@ -202,7 +229,7 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 		return(err);
 	}
 
-	err = OCILobGetLength(oci_ctxp->svchp, oci_ctxp->errhp,
+	err = OCILobGetLength(this_ctxp->svchp, this_ctxp->errhp,
 		lobl, &loblen);
 
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
@@ -215,7 +242,7 @@ int simple_lob_query(OCIExtProcContext *ctx, char *sql, OCILobLocator *lobl, cha
 	amtp = loblen;
 	*buflen = amtp;
 	
-	err = OCILobRead(oci_ctxp->svchp, oci_ctxp->errhp, lobl, &amtp, 1,
+	err = OCILobRead(this_ctxp->svchp, this_ctxp->errhp, lobl, &amtp, 1,
 		(dvoid *)buf, (loblen < MAX_SIMPLE_QUERY_RESULT ?
 		loblen : MAX_SIMPLE_QUERY_RESULT), 0, 0, 0, SQLCS_IMPLICIT);
 

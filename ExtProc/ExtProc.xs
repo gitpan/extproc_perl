@@ -8,7 +8,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: ExtProc.xs,v 1.6 2002/11/20 20:43:06 jhorwitz Exp $ */
+/* $Id: ExtProc.xs,v 1.7 2003/04/22 01:39:52 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,8 +22,12 @@ extern "C" {
 }
 #endif
 
-extern OCIExtProcContext *this_ctx;
+extern ocictx this_ctx;
+extern int _connected;
 typedef struct OCIExtProcContext *ExtProc__OCIExtProcContext;
+typedef struct OCIEnv *ExtProc__OCIEnvHandle;
+typedef struct OCISvcCtx *ExtProc__OCISvcHandle;
+typedef struct OCIError *ExtProc__OCIErrHandle;
 
 MODULE = ExtProc		PACKAGE = ExtProc		
 
@@ -32,12 +36,54 @@ exception(msg)
 	char *msg;
 
 	CODE:
-	ora_exception(this_ctx, msg);
+	ora_exception(this_ctx.ctx, msg);
 
 ExtProc::OCIExtProcContext
 context()
 	CODE:
-	RETVAL = this_ctx;
+	RETVAL = this_ctx.ctx;
+
+	OUTPUT:
+	RETVAL
+
+void
+_connected_on()
+	CODE:
+	_connected = 1;
+
+void
+_connected_off()
+	CODE:
+	_connected = 0;
+
+int
+_is_connected()
+	CODE:
+	RETVAL = _connected;
+
+	OUTPUT:
+	RETVAL
+
+ExtProc::OCIEnvHandle
+_envhp()
+	CODE:
+	RETVAL = this_ctx.envhp;
+
+	OUTPUT:
+	RETVAL
+
+ExtProc::OCISvcHandle
+_svchp()
+	CODE:
+	RETVAL = this_ctx.svchp;
+
+	OUTPUT:
+	RETVAL
+
+ExtProc::OCIErrHandle
+_errhp()
+	CODE:
+	RETVAL = this_ctx.errhp;
 
 	OUTPUT:
 	RETVAL
@@ -49,7 +95,7 @@ database_name()
 	char *sql = "select ora_database_name from dual";
 
 	PPCODE:
-	simple_query(this_ctx, sql, res, 0);
+	simple_query(this_ctx.ctx, sql, res, 0);
 	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
 
 void
@@ -59,7 +105,7 @@ sessionid()
 	char *sql = "select USERENV('sessionid') from dual";
 
 	PPCODE:
-	simple_query(this_ctx, sql, res, 0);
+	simple_query(this_ctx.ctx, sql, res, 0);
 	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
 
 void
@@ -69,5 +115,5 @@ user()
 	char *sql = "select user from dual";
 
 	PPCODE:
-	simple_query(this_ctx, sql, res, 0);
+	simple_query(this_ctx.ctx, sql, res, 0);
 	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));

@@ -1,8 +1,11 @@
-# $Id: typemap,v 1.1 2001/08/31 14:59:18 jhorwitz Exp $
+# $Id: typemap,v 1.2 2003/04/22 01:39:22 jeff Exp $
 
 TYPEMAP
 
 ExtProc::OCIExtProcContext	T_PTROBJ_NU
+ExtProc::OCIEnvHandle		T_PTROBJ_NU
+ExtProc::OCISvcHandle		T_PTROBJ_NU
+ExtProc::OCIErrHandle		T_PTROBJ_NU
 
 OUTPUT
 

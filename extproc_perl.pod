@@ -89,38 +89,27 @@ Force extproc_perl to load code from the database immediately.
 
 If you are using DBD::Oracle with the supplied patch, you can query the calling
 database using DBI.  This is a surprisingly fast operation, as there is no
-need to establish a new session to the database.  There are three basic steps
-to use a DBI callback:
+need to establish a new session to the database.  There are two basic steps
+for using a DBI callback:
 
 =over 4
 
-1. Fetch the OCI context using the ExtProc module as follows:
+1. Initialize the callback infrastructure and obtain a DBI handle using
+ExtProc->dbi_connect:
 
 =over 4
 
-use ExtProc;
-my $context = ExtProc::context;
+my $dbh = ExtProc->dbi_connect();
 
 =back
 
-2. Initialize the callback infrastructure using DBI->connect.  Connect to the
-database "extproc" and pass the context from step 1 as the attribute
-"ora_context":
-
-=over 4
-
-my $dbh = DBI->connect("dbi:Oracle:extproc", "", "",
-    { 'ora_context' => $context } );
-
-=back
-
-3. Query/Update the database using standard DBI methods.
+2. Query/Update the database using standard DBI methods.
 
 =back
 
 NOTE: External procedure callbacks are stateless, therefore you MUST call
-DBI->connect before EACH callback to the database to reestablish the callback
-infrastructure.
+DBI->connect once per transaction (for extproc_perl, this means once per
+function or procedure call from Oracle).
 
 The following rules apply when using DBI callbacks:
 
@@ -128,50 +117,17 @@ The following rules apply when using DBI callbacks:
 
 =item
 
-* Queries work from both functions and procedures.
+Queries work from both functions and procedures.
 
 =item
 
-* DML statements (insert, update, delete, etc.) only work from procedures.
+DML statements (insert, update, delete, etc.) only work from procedures.
 This is an Oracle restriction.
 
 =item
 
-* DDL statements (create table, drop table, etc.) will not work at all.
+DDL statements (create table, drop table, etc.) will not work at all.
 Again, an Oracle restriction.
-
-=item
-
-* Due to a bug in the passing of contexts between extproc_perl and DBI, you
-MUST call the special _preload subroutine under the following conditions:
-
-=over 4
-
-=item
-
-* You are calling the subroutine as a procedure.
-
-=item
-
-* The procedure to be called is stored in the database.
-
-=item
-
-* The procedure uses DBI to query or modify the database
-
-=item
-
-* The procedure is the first subroutine to be called in the session that
-is stored in the database.  If a previous subroutine has been called that
-was stored in the database, it is not necessary to call _preload.
-
-=back
-
-These rules are necessary becuase there appears to be some mishandling
-of the OCI context between the internal callback to fetch the database code
-and the callback in the procedure.  It's a bug for sure, but _preload works
-around it for now.  If this really bothers you, store your DBI code in the
-bootstrap file.  There is no ETA on a fix for this bug.
 
 =back
 

@@ -8,7 +8,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.c,v 1.28 2003/04/16 15:00:26 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.29 2003/04/22 01:42:27 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,13 +27,14 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"0.96"
+#define EXTPROC_PERL_VERSION	"0.97"
 
 #define PERL_NO_GET_CONTEXT
 
 static PerlInterpreter *perl;
 static char code_table[256];
-OCIExtProcContext *this_ctx; /* for ExtProc module */
+ocictx this_ctx; /* for ExtProc module & DBI */
+int _connected; /* for collaboration between extproc_perl & DBI */
 
 EXTERN_C void xs_init();
 
@@ -51,6 +52,7 @@ PerlInterpreter *pl_startup(void)
 	int argc;
 	char *argv[3];
 	struct stat st;
+	SV *sv;
 
 	dTHX;
 
@@ -76,6 +78,7 @@ PerlInterpreter *pl_startup(void)
 
 	if (!perl_parse(p, xs_init, argc, argv, NULL)) {
 		if (!perl_run(p)) {
+			load_module(aTHX_ PERL_LOADMOD_NOIMPORT,(SV*)newSVpv("ExtProc",0),Nullsv);
 			return(p);
 		}
 	}
@@ -157,7 +160,10 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	dTHX;
 
 	/* set OCI context for ExtProc module */
-	this_ctx = ctx;
+	this_ctx.ctx = ctx;
+
+	/* new transaction, new extproc "connection" */
+	_connected = 0;
 
 	/* grab arguments, NULL terminated */
 	va_start(ap, sub);
@@ -300,7 +306,10 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 	dTHX;
 
 	/* set OCI context for ExtProc module */
-	this_ctx = ctx;
+	this_ctx.ctx = ctx;
+
+	/* new transaction, new extproc "connection" */
+	_connected = 0;
 
 	/* grab arguments, NULL terminated */
 	va_start(ap, sub);

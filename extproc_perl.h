@@ -8,7 +8,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.h,v 1.11 2003/04/12 22:32:04 jeff Exp $ */
+/* $Id: extproc_perl.h,v 1.14 2003/04/20 20:11:53 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -20,6 +20,7 @@
 #define MAX_CODE_SIZE		8192 /* <= MAX_SIMPLE_QUERY_RESULT */
 
 struct ocictx {
+	OCIExtProcContext *ctx;	/* For OCI ExtProc Context */
 	OCIEnv *envhp;		/* For OCI Environment Handle */
 	OCISvcCtx *svchp;	/* For OCI Service Handle */
 	OCIError *errhp;	/* For OCI Error Handle  */

@@ -1,4 +1,13 @@
-$Id: Changes,v 1.12 2003/04/16 15:03:55 jeff Exp $
+$Id: Changes,v 1.13 2003/04/22 01:45:07 jeff Exp $
+
+0.97	Mon Apr 21 21:25:31 EDT 2003
+	* New DBD::Oracle patch allows passing of existing handles in place
+	  of a new context.  This fixes the multiple query problem in 0.96.
+	* Added significant infrastructure to the extproc_perl core to save
+	  the state of OCI handles for passing to DBD::Oracle in
+	  multiple-query transactions
+	* New ExtProc->dbi_connect() wraps DBI->connect and encapsulates
+	  the logic used in context/handle passing to DBD::Oracle
 
 0.96	Wed Apr 16 11:00:58 EDT 2003
 	* Make code compliant with Perl's threading context API
