@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.21 2003/12/27 22:32:19 jeff Exp $
+# $Id: Code.pm,v 1.27 2004/01/18 19:23:15 jeff Exp $
 
 package ExtProc::Code;
 
@@ -19,7 +19,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_04';
+our $VERSION = '1.99_05';
 
 use ExtProc;
 use File::Spec;
@@ -54,6 +54,15 @@ my %typemap = (
 		'PARAMTYPE'	=> 'string',
 		'NULLABLE'	=> 1,
 		'VARLENGTH'	=> 1
+	},
+	'DATE' => {
+		'IN'		=> 'OCIDate *',
+		'OUT'		=> 'OCIDate *',
+		'IN OUT'	=> 'OCIDate *',
+		'RETURN'	=> 'OCIDate *',
+		'PARAMTYPE'	=> 'OCIDate',
+		'NULLABLE'	=> 1,
+		'VARLENGTH'	=> 0
 	},
 	'void'	=> {
 		'IN'		=> 'void',
@@ -108,7 +117,12 @@ sub create_wrapper
 			$args[$n]{'inout'} = $inout;
 			my $tmp = "$ctype arg$n";
 			if ($typemap{$type}{'NULLABLE'}) {
-				$tmp .= ", OCIInd is_null_$n";
+				if ($inout =~ /OUT/) {
+					$tmp .= ", OCIInd *is_null_$n";
+				}
+				else {
+					$tmp .= ", OCIInd is_null_$n";
+				}
 			}
 			if ($typemap{$type}{'VARLENGTH'}) {
 				if ($inout =~ /OUT/) {
@@ -214,7 +228,7 @@ _DONE_
 		}
 
 		print CODE <<_DONE_;
-	EP_DEBUGF(c, "-- prototype: $proto", ctx);
+	EP_DEBUG(c, "-- prototype: $proto");
 
 	c->subtype = $subtype;
 
@@ -242,24 +256,60 @@ _DONE_
 
 _DONE_
 		foreach my $n (0..$#args) {
-			print CODE "\t/* push $args[$n]{'spec'} arg$n onto stack */\n";
+			print CODE "\t/* push arg$n ($args[$n]{'spec'}) onto stack */\n";
 			if ($typemap{$args[$n]{'type'}}{'NULLABLE'}) {
-				print CODE <<_DONE_;
+				if ($args[$n]{'inout'} eq 'IN') {
+					print CODE <<_DONE_;
 	if (is_null_$n == OCI_IND_NULL) {
 		sv = sv_2mortal(newSVsv(&PL_sv_undef));
 	}
 	else {
 _DONE_
+				}
+				else {
+					if ($args[$n]{'type'} eq 'VARCHAR2') {
+						if ($args[$n]{'inout'} eq 'OUT') {
+							print CODE <<_DONE_;
+	sv = sv_2mortal(newSVsv(&PL_sv_undef));
+	{ /* placeholder brace */
+_DONE_
+						}
+						else {
+							print CODE <<_DONE_;
+	if (*is_null_$n == OCI_IND_NULL) {	
+		sv = sv_2mortal(newSVsv(&PL_sv_undef));
+	}
+	else {
+_DONE_
+						}
+					}
+					else {
+						print CODE "\t{ /* placeholder brace */\n";
+					}
+				}
 			}
 			my $star = ($args[$n]{'inout'} =~ /OUT/) ? "*" : "";
 			if ($args[$n]{'carg'} =~ /^char /) {
-				print CODE "\tsv = sv_2mortal(newSVpvn(arg$n, ${star}length_$n));\n";
+				if ($args[$n]{'inout'} =~ /IN/) {
+					# for IN modes
+					print CODE "\tsv = sv_2mortal(newSVpvn(arg$n, ${star}length_$n));\n";
+				}
+				else {
+					# for IN OUT & OUT modes
+					print CODE "\tsv = sv_newmortal();\n";
+				}
 			}
 			elsif ($args[$n]{'carg'} =~ /^int /) {
 				print CODE "\tsv = sv_2mortal(newSViv(${star}arg$n));\n";
 			}
 			elsif ($args[$n]{'carg'} =~ /^float /) {
 				print CODE "\tsv = sv_2mortal(newSVnv(${star}arg$n));\n";
+			}
+			elsif ($args[$n]{'carg'} =~ /^OCIDate /) {
+				print CODE <<_DONE_;
+	sv = sv_newmortal();
+	sv_setref_pv(sv, "ExtProc::DataType::OCIDate", arg$n);
+_DONE_
 			}
 			else {
 				die "unsupported C datatype: $args[$n]{'carg'} (was $args[$n]{'spec'})";
@@ -276,8 +326,9 @@ _DONE_
 			}
 
 			# IN OUT & OUT types are always passed as references
+			# leave SV alone if it's already a reference
 			if ($args[$n]{'inout'} =~ /OUT/) {
-				print CODE "\tXPUSHs(newRV_noinc(sv));\n";
+				print CODE "\tXPUSHs(sv_isobject(sv) ? sv : newRV_noinc(sv));\n";
 			}
 			else {
 				print CODE "\tXPUSHs(sv);\n";
@@ -311,13 +362,27 @@ _DONE_
 			if ($args[$n]{'inout'} =~ /OUT/) {
 				if ($args[$n]{'carg'} =~ /^char /) {
 					print CODE <<_DONE_;
-	tmp = SvPV(svcache[$n], len);
-	if (len > *maxlen_$n) {
-		ora_exception(c, "length of arg$n exceeds maximum length for parameter");
-		$return_fatal;
+	if (!SvTRUE(svcache[$n])) {
+		*is_null_$n = OCI_IND_NULL;
 	}
-	Copy(tmp, arg$n, len, char);
-	*length_$n = len;
+	else {
+		*is_null_$n = OCI_IND_NOTNULL;
+		tmp = SvPV(svcache[$n], len);
+		if (len > *maxlen_$n) {
+			EP_DEBUGF(c, "maxlen = %d, len = %d", *maxlen_$n, len);
+			ora_exception(c, "length of arg$n exceeds maximum length for parameter");
+			$return_fatal;
+		}
+		Copy(tmp, arg$n, len, char);
+		*length_$n = len;
+	}
+_DONE_
+				}
+				elsif ($args[$n]{'carg'} =~ /^OCIDate /) {
+					# return non-NULL date
+					print CODE <<_DONE_;
+	/* DATE types are passed as pointers, so no need to copy again */
+	*is_null_$n = OCI_IND_NOTNULL;
 _DONE_
 				}
 				elsif ($args[$n]{'carg'} =~ /^int /) {
@@ -352,10 +417,15 @@ _DONE_
 _DONE_
 			if ($crettype =~ /char\s*\*/) {
 				print CODE <<_DONE_;
-        tmp = SvPV(sv,len);
-        New(0, res, len+1, char);
-        Copy(tmp, res, len, char);
-        res[len] = '\\0';
+	tmp = SvPV(sv,len);
+	New(0, res, len+1, char);
+	Copy(tmp, res, len, char);
+	res[len] = '\\0';
+_DONE_
+			}
+			elsif ($crettype =~ /OCIDate\s*\*/) {
+				print CODE <<_DONE_;
+	res = ($crettype)SvIV(SvRV(sv));
 _DONE_
 			}
 			elsif ($crettype eq 'int') {
@@ -374,7 +444,7 @@ _DONE_
 
 			print CODE <<_DONE_;
 
-	*ret_ind = SvOK(sv) ? OCI_IND_NOTNULL : OCI_IND_NULL;
+	*ret_ind = SvTRUE(sv) ? OCI_IND_NOTNULL : OCI_IND_NULL;
 
 	/* clean up stack and return */
 	PUTBACK;

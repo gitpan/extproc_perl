@@ -1,4 +1,4 @@
-/* $Id: ExtProc.xs,v 1.8 2003/11/12 00:00:25 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.9 2004/01/10 02:02:55 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,6 +19,7 @@ typedef struct OCIExtProcContext *ExtProc__OCIExtProcContext;
 typedef struct OCIEnv *ExtProc__OCIEnvHandle;
 typedef struct OCISvcCtx *ExtProc__OCISvcHandle;
 typedef struct OCIError *ExtProc__OCIErrHandle;
+typedef OCIDate *ExtProc__DataType__OCIDate;
 
 MODULE = ExtProc		PACKAGE = ExtProc		
 PROTOTYPES: disable
@@ -120,3 +121,71 @@ config(name)
 		ora_exception(my_contextp, "unknown configuration directive");
 		XSRETURN_UNDEF;
 	}
+
+MODULE = ExtProc	PACKAGE = ExtProc::DataType::OCIDate	PREFIX = EPDT_OCIDate_
+PROTOTYPES: disable
+
+void
+EPDT_OCIDate_getdate(d)
+	ExtProc::DataType::OCIDate d
+
+	PREINIT:
+	int year;
+	int month;
+	int day;
+
+	PPCODE:
+	OCIDateGetDate(d, &year, &month, &day);
+	XPUSHs(newSViv(year));
+	XPUSHs(newSViv(month));
+	XPUSHs(newSViv(day));
+
+void
+EPDT_OCIDate_setdate(d, year, month, day)
+	ExtProc::DataType::OCIDate d
+	int year
+	int month
+	int day
+
+	CODE:
+	OCIDateSetDate(d, year, month, day);
+
+void
+EPDT_OCIDate_gettime(d)
+	ExtProc::DataType::OCIDate d
+
+	PREINIT:
+	int hour;
+	int min;
+	int sec;
+
+	PPCODE:
+	OCIDateGetTime(d, &hour, &min, &sec);
+	XPUSHs(newSViv(hour));
+	XPUSHs(newSViv(min));
+	XPUSHs(newSViv(sec));
+
+void
+EPDT_OCIDate_settime(d, hour, min, sec)
+	ExtProc::DataType::OCIDate d
+	int hour
+	int min
+	int sec
+
+	CODE:
+	OCIDateSetTime(d, hour, min, sec);
+
+SV *
+EPDT_OCIDate_to_char(d, fmt)
+	ExtProc::DataType::OCIDate d
+	char *fmt
+
+	PREINIT:
+	char *string;
+
+	CODE:
+	string = ocidate_to_string(my_contextp, d, fmt);
+	RETVAL = sv_2mortal(newSVpv(string, 0));
+
+	OUTPUT:
+	RETVAL

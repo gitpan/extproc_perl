@@ -1,4 +1,4 @@
-# $Id: ExtProc.pm,v 1.12 2003/12/27 22:32:19 jeff Exp $
+# $Id: ExtProc.pm,v 1.14 2004/01/17 22:03:19 jeff Exp $
 
 package ExtProc;
 
@@ -21,7 +21,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_04';
+our $VERSION = '1.99_05';
 
 # destructor functions -- should be per-session
 # can't easily put in ExtProc object due to ep_fini, but probably should
@@ -246,6 +246,42 @@ the database at all.
  $e->register_destructor(\&bye);
 
 =back
+
+=head1 DATE METHODS
+
+Oracle DATE values are passed to Perl as objects of type
+ExtProc::DataType::OCIDate.  You can manipulate the date and time values within
+by using the methods documented below.
+
+=over 4
+
+=item getdate()
+
+Returns a list of the year, month, and day of the date.
+
+ ($year, $month, $day) = $date->getdate;
+
+=item setdate(year, month, day)
+
+Sets the date in the date object according to the supplied arguments.
+
+=item gettime()
+
+Returns a list of the hour (24-hour format), minute, and second of the date.
+
+ ($hour, $minute, $second) = $date->gettime;
+
+=item settime(hour, minute, second)
+
+Sets the time in the date object according to the supplied arguments.
+
+=item to_char(format)
+
+Perl implementation of the PL/SQL to_char function.  Returns a string
+representation of the date object in the format you specify.  See the Oracle
+documentation for appropriate date formats.
+
+ print $date->to_char('YYYY/MM/DD HH24:MI:SS');
 
 =head1 AUTHOR
 

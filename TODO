@@ -1,6 +1,8 @@
 * opcode security
 * complete online user's guide
-* more utilities in ExtProc::Util
 * more config values for ExtProc::config()
 * autoload certain ExtProc subroutines to save on compile time
 * object oriented interface to subroutines (function & procedure methods, etc.)
+* rewrite Code.pm to be coherent and more scalable
+* support for LOB locators as parameters
+* pass NULL indicator to perl for structure types (e.g. DATE)

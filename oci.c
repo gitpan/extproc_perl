@@ -1,4 +1,4 @@
-/* $Id: oci.c,v 1.5 2003/11/13 16:46:08 jeff Exp $ */
+/* $Id: oci.c,v 1.6 2004/01/10 02:02:55 jeff Exp $ */
 
 #include <oci.h>
 #include <EXTERN.h>
@@ -235,4 +235,67 @@ int get_sessionid(EP_CONTEXT *c, int *sessionid)
 	}
 
 	return(OCI_SUCCESS);
+}
+
+/* convert string to OCIDate */
+OCIDate *string_to_ocidate(EP_CONTEXT *c, char *s, char *fmt)
+{
+	OCIDate *d;
+	int err;
+	ocictx *this_ctxp = &(c->oci_context);
+
+	err = ep_OCIExtProcGetEnv(c);
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"getenv");
+		return(NULL);
+	}
+
+	err = OCIDateFromText(
+		this_ctxp->errhp,
+		(const text *)(s), strlen(s),
+		(const text *)(fmt), strlen(fmt),
+		NULL,
+		0,
+		d);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"OCIDateFromText");
+		return(NULL);
+	}
+
+	return(d);
+}
+
+/* convert OCIDate to string */
+char *ocidate_to_string(EP_CONTEXT *c, OCIDate *d, char *fmt)
+{
+	char *s;
+	int err, len;
+	ocictx *this_ctxp = &(c->oci_context);
+
+	err = ep_OCIExtProcGetEnv(c);
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"getenv");
+		return(NULL);
+	}
+
+	len = 255;
+	s = OCIExtProcAllocCallMemory(c->oci_context.ctx, len);
+
+	err = OCIDateToText(
+		this_ctxp->errhp,
+		d,
+		(const text *)(fmt), strlen(fmt),
+		NULL,
+		0,
+		&len,
+		(text *)s
+	);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"OCIDateFromText");
+		s = NULL;
+	}
+
+	return(s);
 }

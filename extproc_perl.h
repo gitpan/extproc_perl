@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.h,v 1.10 2003/11/28 21:51:09 jeff Exp $ */
+/* $Id: extproc_perl.h,v 1.11 2004/01/10 02:02:55 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -66,5 +66,7 @@ int get_sessionid(EP_CONTEXT *, int *);
 PerlInterpreter *pl_startup(EP_CONTEXT *);
 void _ep_init(EP_CONTEXT *, OCIExtProcContext *);
 char *parse_code(EP_CONTEXT *, EP_CODE *, char*);
+OCIDate *string_to_ocidate(EP_CONTEXT *, char *, char *);
+char *ocidate_to_string(EP_CONTEXT *, OCIDate *, char *);
 
 #endif /* EXTPROC_PERL_H */

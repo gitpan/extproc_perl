@@ -1,4 +1,11 @@
-$Id: Changes,v 1.7 2003/12/27 23:49:57 jeff Exp $
+$Id: Changes,v 1.10 2004/01/18 18:57:44 jeff Exp $
+
+1.99_05 Sat Jan 17 16:59:49 EST 2004
+	* support for DATE types
+	* methods for manipulating DATE values in Perl
+	* existing libperlxsi is no longer overwritten during installation
+	* set NULL indicators for IN OUT & OUT types
+	* fix inc_path_to_mflag crash on solaris
 
 1.99_04 Sat Dec 27 18:48:07 EST 2003
 	* implement NULL, LENGTH, and MAXLEN indicators for variable length

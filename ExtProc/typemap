@@ -1,4 +1,4 @@
-# $Id: typemap,v 1.1 2003/10/10 17:09:58 jeff Exp $
+# $Id: typemap,v 1.2 2004/01/10 02:02:55 jeff Exp $
 
 TYPEMAP
 
@@ -6,6 +6,21 @@ ExtProc::OCIExtProcContext	T_PTROBJ_NU
 ExtProc::OCIEnvHandle		T_PTROBJ_NU
 ExtProc::OCISvcHandle		T_PTROBJ_NU
 ExtProc::OCIErrHandle		T_PTROBJ_NU
+ExtProc::DataType::OCIDate	T_PTROBJ_NU
+
+INPUT
+
+T_PTROBJ_NU
+	if ($arg == &PL_sv_undef) {
+		$var = 0;
+	}
+	else if (sv_isa($arg, \"${ntype}\")) {
+		IV tmp = SvIV((SV*)SvRV($arg));
+		$var = ($type) tmp;
+	}
+	else {
+		croak(\"$var is not of type ${ntype}\");
+	}
 
 OUTPUT
 

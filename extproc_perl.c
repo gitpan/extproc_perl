@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.23 2003/12/27 22:44:29 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.25 2004/01/18 18:40:49 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.99_04"
+#define EXTPROC_PERL_VERSION	"1.99_05"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -162,7 +162,7 @@ char *inc_path_to_mflag(EP_CONTEXT *c)
 
 	EP_DEBUGF(c, "IN inc_path_to_mflag(%p)", c);
 
-	if (c->inc_path == NULL) return NULL;
+	if (!strcmp(c->inc_path, "")) return NULL;
 
 	/* make volatile copy */
 	q = strdup(c->inc_path);

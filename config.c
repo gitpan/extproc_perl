@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.9 2003/11/28 21:51:09 jeff Exp $ */
+/* $Id: config.c,v 1.11 2004/01/09 21:14:16 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,8 +21,8 @@ extern "C" {
 int read_config(EP_CONTEXT *c, char *fn)
 {
 	FILE *fp;
-	char line[1024], err[256], key[1024], val[1024], n=0;
-	int i;
+	char line[1024], err[256], key[1024], val[1024], *p;
+	int len, i, n = 0;
 
 	if (!(fp = fopen(fn, "r"))) {
 		return 0;
@@ -36,10 +36,20 @@ int read_config(EP_CONTEXT *c, char *fn)
 		}
 
 		/* parse away */
-		if ((i=sscanf(line, "%s %s", key, val)) != 2) {
-			snprintf(err, 255, "Bad configuration line %d (%d)\n", n, i);
+		if ((p = strpbrk(line, " \t"))) {
+			len = p-line;
+			strncpy(key, line, len);
+			key[len] = '\0';
+			strncpy(val, p+1, 1024-len-1);
+			/* get rid of newline */
+			if ((p = strchr(val, '\n'))) {
+				*p = '\0';
+			}
+		}
+		else {
+			snprintf(err, 255, "Bad configuration line %d\n", n);
 			ora_exception(c, err);
-			return 0;
+			return(0);
 		}
 
 		if (!strcmp(key, "code_table")) {
