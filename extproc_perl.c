@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.25 2004/01/18 18:40:49 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.27 2004/02/01 22:03:23 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.99_05"
+#define EXTPROC_PERL_VERSION	"1.99_06"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -195,9 +195,11 @@ PerlInterpreter *pl_startup(EP_CONTEXT *c)
 	int argc, n = 0;
 	char *argv[5], *mflag, bootcode[1024];
 	struct stat st;
-	SV *evalsv;
+	SV *sv;
 
 	dTHX;
+
+	dSP;
 
 	EP_DEBUGF(c, "IN pl_startup(%p)", c);
 
@@ -257,17 +259,27 @@ PerlInterpreter *pl_startup(EP_CONTEXT *c)
 			if (c->use_namespace) {
 				EP_DEBUGF(c, "-- using namespace %s", c->package);
 			}
-			evalsv = eval_pv(bootcode, FALSE);
+			sv = newSVpv(bootcode, 0);
+			eval_sv(sv, G_DISCARD|G_KEEPERR|G_NOARGS);
+			SvREFCNT_dec(sv);
 			if (SvTRUE(ERRSV)) {
-				EP_DEBUGF(c, "FATAL: bootstrap failed: %s",
+				EP_DEBUGF(c, "-- FATAL: bootstrap failed: %s",
 					SvPV(ERRSV, PL_na));
+				ora_exception(c, SvPV(ERRSV, PL_na));
+				perl_destruct(p);
+				perl_free(p);
 				return(NULL);
 			}
 
 			EP_DEBUG(c, "-- bootstrapping successful!");
 			return(p);
 		}
+		EP_DEBUG(c, "-- FATAL: bootstrap failed in perl_run()");
+		ora_exception(c, "-- FATAL: bootstrap failed in perl_run()");
+		return(NULL);
 	}
+	EP_DEBUG(c, "-- FATAL: bootstrap failed in perl_parse()");
+	ora_exception(c, "-- FATAL: bootstrap failed in perl_parse()");
 	return(NULL);
 }
 
@@ -296,6 +308,44 @@ void ep_fini(void)
 
 	/* shutdown gracefully so we can call destructors and free memory */
 	pl_shutdown(&my_context);
+}
+
+/* *_null functions are for maniuplating NULL oracle types */
+
+int is_null(void *p)
+{
+	HV *nullhv;
+	char key[80];
+	EP_CONTEXT *c = &my_context;
+
+	EP_DEBUGF(c, "IN is_null(%p)", p);
+	nullhv = get_hv("ExtProc::_nullhv", TRUE);
+	snprintf(key, 80, "%p", p);
+	return hv_exists(nullhv, key, strlen(key)) ? 1 : 0;
+}
+
+void set_null(void *p)
+{
+	HV *nullhv;
+	char key[80];
+	EP_CONTEXT *c = &my_context;
+
+	EP_DEBUGF(c, "IN set_null(%p)", p);
+	nullhv = get_hv("ExtProc::_nullhv", TRUE);
+	snprintf(key, 80, "%p", p);
+	hv_store(nullhv, key, strlen(key), &PL_sv_yes, 0);
+}
+
+void clear_null(void *p)
+{
+	HV *nullhv;
+	char key[80];
+	EP_CONTEXT *c = &my_context;
+
+	EP_DEBUGF(c, "IN clear_null(%p)", p);
+	nullhv = get_hv("ExtProc::_nullhv", TRUE);
+	snprintf(key, 80, "%p", p);
+	hv_delete(nullhv, key, strlen(key), G_DISCARD);
 }
 
 static char *call_perl_sub(EP_CONTEXT *c, char *sub, char **args)
@@ -422,7 +472,7 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	va_list ap;
 	short ind;
 	char *args[128], *retval, *errbuf, *fqsub;
-	SV *evalsv, *codesv;
+	SV *codesv;
 	EP_CONTEXT *c;
 	EP_CODE code;
 
@@ -470,7 +520,6 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 		EP_DEBUG(c, "RETURN ora_perl_func");
 		if (!c->perl) {
 			*ret_ind = OCI_IND_NULL;
-			ora_exception(c, "interpreter initialization failed");
 			return(NULL);
 		}
 		EP_DEBUGF(c, "-- code table is %s", c->code_table);
@@ -546,7 +595,6 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 		c->perl = pl_startup(c);
 		EP_DEBUG(c, "RETURN ora_perl_proc");
 		if (!c->perl) {
-			ora_exception(c, "interpreter initialization failed");
 			return;
 		}
 		EP_DEBUGF(c, "-- code table is %s", c->code_table);

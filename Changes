@@ -1,4 +1,15 @@
-$Id: Changes,v 1.10 2004/01/18 18:57:44 jeff Exp $
+$Id: Changes,v 1.12 2004/02/01 21:58:03 jeff Exp $
+
+1.99_06 Sun Feb  1 16:55:17 EST 2004
+	* ExtProc module is now built as a shared object
+	* libperxsi.so no longer retains old version of ExtProc when upgrading
+	* can now run 'perl -cw' to check syntax if you preload extproc_perl.so
+	* create trusted code directory during installation if it doesn't exist
+	* rewrote gen_module_libs so it works more reliably
+	* installation will warn you when shared objects are not found
+	* bootstrap failure errors are now more consistent and verbose
+	* is_null and set_null methods manipulate NULL status of oracle
+	  datatype objects
 
 1.99_05 Sat Jan 17 16:59:49 EST 2004
 	* support for DATE types

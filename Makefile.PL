@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.20 2004/01/18 18:25:03 jeff Exp $
+# $Id: Makefile.PL,v 1.22 2004/02/01 21:47:38 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -214,9 +214,9 @@ perlxsi.c:
 .c.o:
 	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
 
-libperlxsi.${dlext}: perlxsi.o \$(SUBROUTINES) \$(INST_DIR)/ExtProc.a
+libperlxsi.${dlext}: perlxsi.o \$(SUBROUTINES) libExtProc.${dlext}
 	[ -f "\$@" ] && mv \$@ \$@.old
-	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(SUBROUTINES) \$(INST_DIR)/ExtProc.a
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(SUBROUTINES) -L. \$(RFLAG)\$(INST_DIR) -lExtProc
 	rm -f perlxsi.c perlxsi.o
 _DONE_
 close(FILE);
@@ -256,23 +256,24 @@ ep_schema.sql: ep_schema.sql.in
 perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
 
-ExtProc.a: extproc_perl.h ExtProc/ExtProc.xs
+libExtProc.${dlext}: extproc_perl.h ExtProc/ExtProc.xs
 	(cd ExtProc ; \$(MAKE))
-	cp -f ExtProc/blib/arch/auto/ExtProc/ExtProc.a .
+	cp -f ExtProc/blib/arch/auto/ExtProc/ExtProc.${dlext} libExtProc.${dlext}
 
 .c.o:
 	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
 
-libperlxsi.${dlext}: \$(XSIOBJS) ExtProc.a
-	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(XSIOBJS) `\$(PERL) gen_module_libs \${MODULES}` ExtProc.a
+libperlxsi.${dlext}: \$(XSIOBJS) libExtProc.${dlext}
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(XSIOBJS) `\$(PERL) gen_module_libs \${MODULES}` -L. \$(RFLAG)${instpath} -lExtProc
 
 extproc_perl.${dlext}: \$(OBJS) libperlxsi.${dlext}
 	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) -L. ${RFLAG}${trusted_dir} libperlxsi.${dlext}
 
 install: all
-	\$(INSTALL) -c -m 444 -o ${ora_user} -g ${ora_group} extproc_perl.${dlext} ${instpath}
-	\$(INSTALL) -c -m 444 -o ${ora_user} -g ${ora_group} ExtProc.a ${instpath}
-	[ -f ${trusted_dir}/libperlxsi.so ] || \$(INSTALL) -c -m 444 -o ${ora_user} -g ${ora_group} libperlxsi.${dlext} ${trusted_dir}
+	\$(INSTALL) -c -m 555 -o ${ora_user} -g ${ora_group} extproc_perl.${dlext} ${instpath}
+	\$(INSTALL) -c -m 555 -o ${ora_user} -g ${ora_group} libExtProc.${dlext} ${instpath}
+	\$(INSTALL) -d -m 775 -o ${ora_user} -g ${ora_group} ${trusted_dir}
+	[ -f ${trusted_dir}/libperlxsi.so ] || \$(INSTALL) -c -m 555 -o ${ora_user} -g ${ora_group} libperlxsi.${dlext} ${trusted_dir}
 	\$(INSTALL) -c -m 444 -o ${ora_user} -g ${ora_group} extproc_perl.h ${trusted_dir}
 	[ -f ${trusted_dir}/perlxsi.mk ] || \$(INSTALL) -c -m 644 -o ${ora_user} -g ${ora_group} perlxsi.mk ${trusted_dir}
 	\$(INSTALL) -c -m 555 -o ${ora_user} -g ${ora_group} gen_module_libs ${trusted_dir}
@@ -280,7 +281,7 @@ install: all
 	(cd ExtProc ; \$(MAKE) install)
 
 clean:
-	rm -f *.o extproc_perl.${dlext} libperlxsi.${dlext} ExtProc.a perlxsi.c perlxsi.mk Makefile \$(CONFS)
+	rm -f *.o extproc_perl.${dlext} libperlxsi.${dlext} libExtProc.${dlext} perlxsi.c perlxsi.mk Makefile \$(CONFS)
 	(cd ExtProc ; \$(MAKE) clean)
 
 distclean: clean

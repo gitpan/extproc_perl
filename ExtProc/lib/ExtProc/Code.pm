@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.27 2004/01/18 19:23:15 jeff Exp $
+# $Id: Code.pm,v 1.29 2004/02/01 22:03:23 jeff Exp $
 
 package ExtProc::Code;
 
@@ -19,7 +19,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_05';
+our $VERSION = '1.99_06';
 
 use ExtProc;
 use File::Spec;
@@ -34,7 +34,7 @@ my %typemap = (
 		'IN OUT'	=> 'int *',
 		'RETURN'	=> 'int',
 		'PARAMTYPE'	=> 'int',
-		'NULLABLE'	=> 0,
+		'NULLABLE'	=> 1,
 		'VARLENGTH'	=> 0
 	},
 	'REAL' => {
@@ -43,7 +43,7 @@ my %typemap = (
 		'IN OUT'	=> 'float *',
 		'RETURN'	=> 'float',
 		'PARAMTYPE'	=> 'float',
-		'NULLABLE'	=> 0,
+		'NULLABLE'	=> 1,
 		'VARLENGTH'	=> 0
 	},
 	'VARCHAR2' => {
@@ -232,6 +232,21 @@ _DONE_
 
 	c->subtype = $subtype;
 
+/* FOR FUTURE USE
+ * you can't compile a C function with a colon in its name, so we don't need
+ * package_subs protection yet */
+#if 0
+	/* don't allow fully qualified subroutine name if package_subs is off */
+	/* exception is ExtProc::* */
+	if (strchr("$name", ':') && !c->package_subs) {
+		/* keep string compare inside the block for performance */
+		if (strncmp(sub, "ExtProc::", 9)) {
+			ora_exception(c, "invalid subroutine");
+			$return_fatal;
+		}
+	}
+#endif
+
 	/* start perl interpreter if necessary */
 	if (!c->perl) {
 		c->perl = pl_startup(c);
@@ -243,7 +258,6 @@ _DONE_
 		}
 
 		print CODE <<_DONE_;
-			ora_exception(c, "interpreter initialization failed");
 			$return_fatal;
 		}
 	}
@@ -309,6 +323,12 @@ _DONE_
 				print CODE <<_DONE_;
 	sv = sv_newmortal();
 	sv_setref_pv(sv, "ExtProc::DataType::OCIDate", arg$n);
+	if (*is_null_$n == OCI_IND_NULL) {
+		set_null(arg$n);
+	}
+	else {
+		clear_null(arg$n); /* in case we used this address before */
+	}
 _DONE_
 			}
 			else {
@@ -379,10 +399,9 @@ _DONE_
 _DONE_
 				}
 				elsif ($args[$n]{'carg'} =~ /^OCIDate /) {
-					# return non-NULL date
 					print CODE <<_DONE_;
 	/* DATE types are passed as pointers, so no need to copy again */
-	*is_null_$n = OCI_IND_NOTNULL;
+	*is_null_$n = is_null(arg$n) ? OCI_IND_NULL : OCI_IND_NOTNULL;
 _DONE_
 				}
 				elsif ($args[$n]{'carg'} =~ /^int /) {
@@ -426,16 +445,19 @@ _DONE_
 			elsif ($crettype =~ /OCIDate\s*\*/) {
 				print CODE <<_DONE_;
 	res = ($crettype)SvIV(SvRV(sv));
+	*ret_ind = is_null(sv) ? OCI_IND_NULL : OCI_IND_NOTNULL;
 _DONE_
 			}
 			elsif ($crettype eq 'int') {
 				print CODE <<_DONE_;
 	res = SvIV(sv);
+	*ret_ind = SvTRUE(sv) ? OCI_IND_NOTNULL : OCI_IND_NULL;
 _DONE_
 			}
 			elsif ($crettype eq 'float') {
 				print CODE <<_DONE_;
 	res = SvNV(sv);
+	*ret_ind = SvTRUE(sv) ? OCI_IND_NOTNULL : OCI_IND_NULL;
 _DONE_
 			}
 			else {
@@ -443,8 +465,6 @@ _DONE_
 			}
 
 			print CODE <<_DONE_;
-
-	*ret_ind = SvTRUE(sv) ? OCI_IND_NOTNULL : OCI_IND_NULL;
 
 	/* clean up stack and return */
 	PUTBACK;

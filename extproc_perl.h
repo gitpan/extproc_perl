@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.h,v 1.11 2004/01/10 02:02:55 jeff Exp $ */
+/* $Id: extproc_perl.h,v 1.12 2004/02/01 21:49:06 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -68,5 +68,8 @@ void _ep_init(EP_CONTEXT *, OCIExtProcContext *);
 char *parse_code(EP_CONTEXT *, EP_CODE *, char*);
 OCIDate *string_to_ocidate(EP_CONTEXT *, char *, char *);
 char *ocidate_to_string(EP_CONTEXT *, OCIDate *, char *);
+int is_null(void *);
+void set_null(void *);
+void clear_null (void *);
 
 #endif /* EXTPROC_PERL_H */

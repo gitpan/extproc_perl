@@ -1,4 +1,4 @@
-# $Id: ExtProc.pm,v 1.14 2004/01/17 22:03:19 jeff Exp $
+# $Id: ExtProc.pm,v 1.16 2004/02/01 22:03:23 jeff Exp $
 
 package ExtProc;
 
@@ -21,7 +21,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_05';
+our $VERSION = '1.99_06';
 
 # destructor functions -- should be per-session
 # can't easily put in ExtProc object due to ep_fini, but probably should
@@ -254,6 +254,14 @@ ExtProc::DataType::OCIDate.  You can manipulate the date and time values within
 by using the methods documented below.
 
 =over 4
+
+=item is_null()
+
+Returns true if the DATE is NULL, false otherwise.
+
+=item set_null()
+
+Set the DATE to an Oracle NULL.  Never "undef" an Oracle DATE type.
 
 =item getdate()
 

@@ -1,39 +1,39 @@
-# $Id: gen_module_libs,v 1.2 2003/10/18 16:20:28 jeff Exp $
+#!/usr/local/perl/5.8.1/shared/bin/perl
 
-# gen_module_libs -- generates list of module shared objects for linking
+# $Id: gen_module_libs,v 1.6 2004/01/30 20:32:32 jeff Exp $
+
+# gen_module_libs -- find shared objects for installed perl modules
 
 use Config;
-use File::Spec;
-use ExtUtils::Installed;
+use strict;
 
-my @mods = @ARGV;
-if ($#mods < 0) {
-	# don't run if we're not linking with any modules
-	exit(0);
-}
-
-# set some per-system values and initialize ExtUtils::Installed
 my $dlext = $Config{'dlext'};
-my $archlib = $Config{'installarchlib'};
-my $i = ExtUtils::Installed->new();
+my $warning = 0;
 
-# find requested core modules
-my @so;
-my %found;
-foreach my $m (@mods) {
-	my $path = File::Spec->catfile($archlib, 'auto', split(/::/, $m));
-	my @files = grep(/\.$dlext$/, $i->files('Perl', 'all', $path));
-	if ($#files > -1) {
-		push(@so, @files);
-		$found{$m} = 1;
+MODULE:
+foreach my $mod (@ARGV) {
+	next if ($mod eq 'ExtProc');
+	my @comp = split(/::/, $mod);
+	my $dir = join('/', @comp);
+	my $base = $comp[$#comp];
+	foreach my $i (@INC) {
+		my $path = "$i/auto/$dir/${base}.$dlext";
+		if (-e $path) {
+			print "$path ";
+			next MODULE;
+		}
 	}
+	# print warning if we fall through
+	print STDERR <<_DONE_;
+*** WARNING: $mod shared object $base.$dlext not found.
+***          $mod will not be available to extproc_perl.
+_DONE_
+	$warning = 1;
 }
 
-# find other non-core modules, excluding ExtProc, which is statically linked
-# make sure we don't search for core modules, or ExtUtils::Installed will croak
-foreach my $m (@mods) {
-	next if (exists($found{$m}) || $m eq 'ExtProc');
-	push(@so, grep(/\.$dlext$/, $i->files($m)));
+print "\n";
+# if there's a warning, beep and sleep so user sees the message
+if ($warning) {
+	print STDERR "\x07\n";
+	sleep 5;
 }
-
-print join(' ', @so), "\n";

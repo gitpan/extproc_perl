@@ -1,4 +1,4 @@
-$Id: MANIFEST,v 1.6 2003/12/27 23:46:32 jeff Exp $
+$Id: MANIFEST,v 1.7 2004/02/01 22:01:56 jeff Exp $
 
 COPYRIGHT
 Changes
@@ -7,9 +7,9 @@ INSTALL
 MANIFEST
 Makefile.PL
 README
-README.alpha
 THANKS
 TODO
+UPGRADE
 config.c
 ep_package.sql.in
 ep_schema.sql.in

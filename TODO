@@ -1,3 +1,5 @@
+$Id: TODO,v 1.12 2004/02/01 22:00:29 jeff Exp $
+
 * opcode security
 * complete online user's guide
 * more config values for ExtProc::config()
@@ -5,4 +7,3 @@
 * object oriented interface to subroutines (function & procedure methods, etc.)
 * rewrite Code.pm to be coherent and more scalable
 * support for LOB locators as parameters
-* pass NULL indicator to perl for structure types (e.g. DATE)

@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.1 2003/10/10 17:09:58 jeff Exp $
+# $Id: Makefile.PL,v 1.2 2004/01/29 20:29:45 jeff Exp $
 
 use ExtUtils::MakeMaker;
 
@@ -11,5 +11,5 @@ WriteMakefile(
 	'LIBS'		=> [''],
 	'DEFINE'	=> '',
 	'INC'		=> "-I.. -I$oh/rdbms/public -I$oh/rdbms/demo",
-	'LINKTYPE'	=> 'static',
+	'LINKTYPE'	=> 'dynamic',
 );

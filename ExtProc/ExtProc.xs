@@ -1,4 +1,4 @@
-/* $Id: ExtProc.xs,v 1.9 2004/01/10 02:02:55 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.10 2004/02/01 21:49:06 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -149,6 +149,7 @@ EPDT_OCIDate_setdate(d, year, month, day)
 
 	CODE:
 	OCIDateSetDate(d, year, month, day);
+	clear_null(d);
 
 void
 EPDT_OCIDate_gettime(d)
@@ -174,6 +175,7 @@ EPDT_OCIDate_settime(d, hour, min, sec)
 
 	CODE:
 	OCIDateSetTime(d, hour, min, sec);
+	clear_null(d);
 
 SV *
 EPDT_OCIDate_to_char(d, fmt)
@@ -189,3 +191,20 @@ EPDT_OCIDate_to_char(d, fmt)
 
 	OUTPUT:
 	RETVAL
+
+int
+EPDT_OCIDate_is_null(d)
+	ExtProc::DataType::OCIDate d
+
+	CODE:
+	RETVAL = is_null(d);
+
+	OUTPUT:
+	RETVAL
+
+void
+EPDT_OCIDate_set_null(d)
+	ExtProc::DataType::OCIDate d
+
+	CODE:
+	set_null(d);
