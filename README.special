@@ -1,4 +1,4 @@
-$Id: README.special,v 1.6 2003/04/12 16:21:19 jeff Exp $
+$Id: README.special,v 1.7 2003/04/14 20:16:16 jeff Exp $
 
 The following subroutines are reserved for extproc_perl and may be called
 like any other Perl subroutine from Oracle.
@@ -14,5 +14,7 @@ _modules() -- Returns a space separated list of modules that were requested to
 _codetable(table_name) -- Gets or returns the database table queried for code.
 
 _error() -- Returns the most recent error string.
+
+_errno() -- Returns the most recent system error message ($! in Perl).
 
 _preload() -- Force extproc_perl to load code from the database immediately.

@@ -8,7 +8,7 @@
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.h,v 1.10 2002/11/18 01:22:33 jhorwitz Exp $ */
+/* $Id: extproc_perl.h,v 1.11 2003/04/12 22:32:04 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -33,8 +33,6 @@ struct ocictx {
 	OCIDefine *dfn3p;	/* For OCI Define Handle */
 };
 typedef struct ocictx ocictx;
-
-void xs_init(void);
 
 void ora_exception(OCIExtProcContext *, char *);
 

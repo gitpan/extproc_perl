@@ -1,4 +1,4 @@
-$Id: README,v 1.18 2003/04/12 16:56:01 jeff Exp $
+$Id: README,v 1.19 2003/04/16 15:03:24 jeff Exp $
 
 Oracle Perl Procedure Library
 
@@ -23,7 +23,7 @@ extproc_perl now has a home on the web: http://www.smashing.org/extproc_perl
 REQUIREMENTS
 ------------
 o Perl 5.005_62 or later (built and tested with 5.6.1)
-o shared libperl
+o shared libperl, non-threads enabled (threading perl crashes extproc_perl)
 o Oracle 8 server with OCI development libraries and headers (built and
   tested with 8.1.7 -- may work with earlier versions)
 o DBI and DBD::Oracle 1.08 or later.  Needed for the "ep" command.

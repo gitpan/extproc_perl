@@ -75,6 +75,10 @@ Sets or returns the database table queried for code.
 
 Returns the most recent error string.
 
+=item _errno()
+
+Returns the most recent system error message ($! in Perl).
+
 =item _preload()
 
 Force extproc_perl to load code from the database immediately.
@@ -153,8 +157,7 @@ MUST call the special _preload subroutine under the following conditions:
 
 =item
 
-* The procedure uses DBI to modify the database (queries do not appear to be
-affected by this bug, but your mileage may vary).
+* The procedure uses DBI to query or modify the database
 
 =item
 
@@ -167,7 +170,7 @@ was stored in the database, it is not necessary to call _preload.
 These rules are necessary becuase there appears to be some mishandling
 of the OCI context between the internal callback to fetch the database code
 and the callback in the procedure.  It's a bug for sure, but _preload works
-around it for now.  If this really bothers you, store your DML code in the
+around it for now.  If this really bothers you, store your DBI code in the
 bootstrap file.  There is no ETA on a fix for this bug.
 
 =back

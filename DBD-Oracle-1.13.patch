@@ -1,0 +1,11 @@
+--- dbdimp.c.orig	Wed Apr 16 10:03:37 2003
++++ dbdimp.c	Wed Apr 16 10:06:44 2003
+@@ -281,7 +281,7 @@
+ 	dump_env_to_trace();
+ 
+     /* "extproc" dbname is special if "ora_context" attribute also given */
+-    if (strEQ(dbname,"extproc") && (svp=DBD_ATTRIB_GET_SVP(attr, "ora_context", 7))) {
++    if (strEQ(dbname,"extproc") && (svp=DBD_ATTRIB_GET_SVP(attr, "ora_context", 11))) {
+ 	IV tmp;
+ 	if (!svp)
+ 	    croak("pointer to context SV is NULL");

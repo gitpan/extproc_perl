@@ -1,4 +1,4 @@
-$Id: README.modules,v 1.1 2001/08/20 18:17:06 jhorwitz Exp $
+$Id: README.modules,v 1.2 2003/04/14 17:54:23 jeff Exp $
 
 Oracle does not support (nor does it work anyway) the dynamic loading of
 shared objects from an external procedure.  Therefore, the use of the dl*
@@ -33,5 +33,4 @@ ending with the platform's shared object extension ($Config{dlext}).  These
 files are linked with the final extproc_perl library so they are loaded at
 run-time.
 
-This method of loading modules has been tested on Solaris 8.  Testing must
-still be done on earlier versions of Solaris as well as Linux 2.2 and 2.4.
+This method of loading modules has been tested on Solaris 8 and Linux 2.4.

@@ -1,20 +1,21 @@
 /*
  * Oracle Perl Procedure Library
  *
- * Copyright (c) 2001, 2002 Jeff Horwitz (jeff@smashing.org).
+ * Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
  * All rights reserved.
  *
  * This package is free software; you can redistribute it and/or modify it
  * under the same terms as Perl itself.
  */
 
-/* $Id: extproc_perl.c,v 1.23 2003/04/12 16:15:35 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.28 2003/04/16 15:00:26 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -26,11 +27,15 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"0.95"
+#define EXTPROC_PERL_VERSION	"0.96"
+
+#define PERL_NO_GET_CONTEXT
 
 static PerlInterpreter *perl;
 static char code_table[256];
 OCIExtProcContext *this_ctx; /* for ExtProc module */
+
+EXTERN_C void xs_init();
 
 void ora_exception(OCIExtProcContext *ctx, char *msg)
 {
@@ -46,6 +51,8 @@ PerlInterpreter *pl_startup(void)
 	int argc;
 	char *argv[3];
 	struct stat st;
+
+	dTHX;
 
 	/* create interpreter */
 	if((p = perl_alloc()) == NULL) {
@@ -98,6 +105,9 @@ static char *call_perl_sub(OCIExtProcContext *ctx, char *sub, char **args)
 	int nret;
 	char *tmp, *retval, **p;
 	SV *sv;
+
+	dTHX;
+
 	dSP;
 
 	/* push arguments onto stack */
@@ -142,7 +152,9 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	int status, n = 0;
 	va_list ap;
 	short ind;
-	char *args[MAXARGS], *retval, code[MAX_CODE_SIZE];
+	char *args[MAXARGS], *retval, code[MAX_CODE_SIZE], *errbuf;
+
+	dTHX;
 
 	/* set OCI context for ExtProc module */
 	this_ctx = ctx;
@@ -228,6 +240,29 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 		}
 	}
 
+	/* check for errno request */
+	if (!strncmp(sub, "_errno", 6)) {
+		if (errno) {
+			errbuf = strerror(errno);
+			*ret_ind = OCI_IND_NOTNULL;
+			return(errbuf);
+		}
+		else {
+			*ret_ind = OCI_IND_NULL;
+			return("\0");
+		}
+	}
+
+	/* check for eval request */
+	if (!strncmp(sub, "_eval", 6)) {
+		eval_pv(args[0], FALSE);
+		if (SvTRUE(ERRSV)) {
+			ora_exception(ctx, SvPV(ERRSV, PL_na));
+		}
+		*ret_ind = OCI_IND_NULL;
+		return("\0");
+	}
+
 	/*
 	 * verify that the subroutine is valid (autoloading not supported)
 	 * try loading code from database if it isn't initially valid.
@@ -261,6 +296,8 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 	va_list ap;
 	short ind;
 	char *args[MAXARGS], code[MAX_CODE_SIZE];
+
+	dTHX;
 
 	/* set OCI context for ExtProc module */
 	this_ctx = ctx;
@@ -319,6 +356,15 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 			ora_exception(ctx, "can't return codetable from a procedure'");
 			return;
 		}
+	}
+
+	/* check for eval request */
+	if (!strncmp(sub, "_eval", 6)) {
+		eval_pv(args[0], FALSE);
+		if (SvTRUE(ERRSV)) {
+			ora_exception(ctx, SvPV(ERRSV, PL_na));
+		}
+		return;
 	}
 
 	/*

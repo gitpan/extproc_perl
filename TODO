@@ -1,7 +1,8 @@
-$Id: TODO,v 1.9 2003/04/12 16:53:34 jeff Exp $
+$Id: TODO,v 1.11 2003/04/16 15:05:00 jeff Exp $
 
 * Work toward 1.0 release
 * ATTEMPT to integrate data and/or interpreter persistence across sessions
 * Add in security, including tainting and opcode-level
-* Fix context handling bug when performing DML operations from a
-  database-loaded subroutine.
+* Fix context handling bug when performing DBI queries from a database-loaded
+  subroutine.
+* Fix segfault when using threaded perl

@@ -6,7 +6,7 @@
 # This package is free software; you can redistribute it and/or modify it under
 # the same terms as Perl itself.
 
-# $Id: ExtProc.pm,v 1.15 2003/04/10 18:46:17 jeff Exp $
+# $Id: ExtProc.pm,v 1.16 2003/04/14 17:50:44 jeff Exp $
 
 package ExtProc;
 
@@ -26,7 +26,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '0.95';
+our $VERSION = '0.96';
 
 bootstrap ExtProc $VERSION;
 

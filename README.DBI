@@ -1,22 +1,33 @@
-$Id: README.DBI,v 1.6 2003/04/12 16:52:20 jeff Exp $
+$Id: README.DBI,v 1.7 2003/04/16 14:29:12 jeff Exp $
 
 It may be useful to query the calling database from an external Perl procedure.
 Since DBI is the standard Perl module for database access, it makes sense to
 use it, along with the DBD::Oracle driver, to connect back to the database.
-Support for external procedures is not included with the current version of
-DBI (1.12 as of this writing), so we supply a patch for that version.  
+Support for external procedures is included in DBD::Oracle as of version 1.13,
+but a bug prevents it from working in that version and 1.14.  A patch is
+supplied to fix that bug.  If you are running DBD::Oracle version 1.12 or
+earlier, you can apply another patch which adds external procedure support.
 
-NOTE: External procedure support will be integrated into DBD::Oracle 1.13.
+Here's how to apply the patches:
 
-Here's how to apply the patch:
+1) Change to the DBD-Oracle distribution directory
+2) Run: chmod 644 dbdimp.c
+3) Patch DBD::Oracle as follows:
 
-1) cd to the DBD-Oracle distribution directory
-2) run: chmod 644 dbdimp.c
-3) copy DBD-Oracle.patch from the extproc_perl distribution to the current
-   directory.
-4) run: patch -p1 < DBD-Oracle.patch
-5) Rebuild and install DBD::Oracle
-6) Rebuild extproc_perl and include DBI and DBD::Oracle in the list of modules
+   If you have DBD::Oracle 1.12 or earlier:
+
+    1) Copy DBD-Oracle.patch from the extproc_perl distribution to the current
+       directory.
+    2) Run: patch -p1 < DBD-Oracle.patch
+
+   If you have DBD::Oracle 1.13 or 1.14:
+
+    1) Copy DBD-Oracle-1.13.patch from the extproc_perl distribution to the
+       current directory.
+    2) Run: patch < DBD-Oracle-1.14.patch
+
+4) Rebuild and install DBD::Oracle
+5) Rebuild extproc_perl and include DBI and DBD::Oracle in the list of modules
    to link with.
 
 To use DBI to connect back to the calling database, you need the current

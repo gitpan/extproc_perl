@@ -1,4 +1,4 @@
-$Id: INSTALL,v 1.8 2003/04/12 17:00:08 jeff Exp $
+$Id: INSTALL,v 1.9 2003/04/16 15:03:24 jeff Exp $
 
 INSTALLATION PROCEDURE
 
@@ -17,6 +17,9 @@ INSTALLATION PROCEDURE
    a separate distribution specifically for Oracle, since using a shared
    libperl may have some unforeseen consequences for your existing production
    scripts!
+
+   NOTE: threads-enabled Perl WILL CRASH extproc_perl.  Use a build of Perl
+   with threading disabled.
 
 2) Set the ORACLE_HOME environment variable to the correct path.  If you don't
    know what this means, ask your friendly DBA.
