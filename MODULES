@@ -1,0 +1,37 @@
+$Id: MODULES,v 1.1 2001/08/20 18:17:06 jhorwitz Exp $
+
+Oracle does not support (nor does it work anyway) the dynamic loading of
+shared objects from an external procedure.  Therefore, the use of the dl*
+functions on Solaris or the dld_* functions on Linux is not permitted,
+rendering Perl's DynaLoader useless.  What does this mean?  It means that
+we can't use DynaLoader to dynamically load Perl modules containing shared
+objects.  Perl-only modules remain unaffected, as there are no shared objects
+to load.
+
+To get around this problem, extproc_perl loads shared objects from the modules
+at run-time by linking with them after compilation.  This lets the operating
+system properly load in the shared objects, avoiding DynaLoader altogether.
+It is analogous to statically linking each module into the Perl interpreter.
+The only thing that needs to be done is to initialize the modules by
+providing hooks into each module's bootstrap function.  We do this by
+creating a special file, perlxsi.c, that contains the XS initialization code.
+This code is created for us by the ExtUtils::Embed module, and is statically
+linked into the extproc_perl shared library.
+
+Unfortunately, this method requires us to know ahead of time which modules we
+want to use, as their shared objects need to be linked to the extproc_perl
+library, and their bootstrap code must be made available to Perl.  If you
+install a new module that uses shared objects, extproc_perl will have to be
+recompiled to use that module.
+
+How do we find the shared objects for each module?  The gen_module_libs script 
+asks Perl itself where to search for them.  In particular, it looks in
+installarchlib, installsitelib, and installprivlib, all of which are available
+through use of the Config module.  gen_module_libs then searches those
+directory trees for paths that match each module's name and looks for files
+ending with the platform's shared object extension ($Config{dlext}).  These
+files are linked with the final extproc_perl library so they are loaded at
+run-time.
+
+This method of loading modules has been tested on Solaris 8.  Testing must
+still be done on earlier versions of Solaris as well as Linux 2.2 and 2.4.

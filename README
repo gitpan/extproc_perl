@@ -1,0 +1,46 @@
+$Id: README,v 1.8 2001/08/20 19:30:03 jhorwitz Exp $
+
+Oracle Perl Procedure Library
+
+Copyright (c) 2001 Jeff Horwitz (jeff@smashing.org).  All rights reserved.
+This package is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+extproc_perl enables Oracle stored procedures and functions to be written
+in Perl.  It uses Oracle 8's external procedure interface to create Perl
+interpreters on the fly to execute Perl subroutines.
+
+Please send all bug reports, questions and suggestions to jeff@smashing.org.
+
+REQUIREMENTS
+------------
+o Perl 5.005_62 or later (built and tested with 5.6.1)
+o shared libperl
+o Oracle 8 server with OCI development libraries and headers (built and
+  tested with 8.1.7 -- may work with earlier versions)
+
+BUILDING & INSTALLATION
+-----------------------
+This is quick and dirty.  See the INSTALL file for more detailed information.
+
+ 1) set the ORACLE_HOME environment variable to the proper path
+ 2) perl Makefile.PL
+ 3) enter the list of Perl modules you'd like to support
+ 4) make -- this will build extproc_perl and the ExtProc Perl module
+ 5) make install -- this will install the ExtProc Perl module
+ 6) copy the extproc_perl library (name is platform-dependent, but it's
+    probably extproc_perl.so) to a location that an Oracle process can
+    access.
+ 7) create a bootstrap file containing the Perl subroutines you wish to run
+    from Oracle.
+ 8) have your DBA create an Oracle function that references the code in the
+    library.  see extproc_perl.sql for sample code.
+ 9) have your DBA start a listener for extproc connections.
+
+BUGS & CAVEATS
+--------------
+* You must end the boostrap file with "return 1;" or the embedded interpreter
+  will barf.  This may break testing with "perl -cw".
+* Since modules are statically compiled into the binary, you must recompile
+  in order to use any new modules installed since the last compile.  This
+  only applies to modules with shared object code (usually compiled from C).

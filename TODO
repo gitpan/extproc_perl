@@ -1,0 +1,3 @@
+$Id: TODO,v 1.4 2001/08/20 15:06:36 jhorwitz Exp $
+
+* Eliminate requirement for "return 1;" at end of bootstrap file.

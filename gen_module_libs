@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Oracle Perl Procedure Library
+#
+# Copyright (c) 2001 Jeff Horwitz (jeff@smashing.org).  All rights reserved.
+# This package is free software; you can redistribute it and/or modify it under
+# the same terms as Perl itself.
+
+# $Id: gen_module_libs,v 1.2 2001/08/14 20:22:23 jhorwitz Exp $
+
+# gen_module_libs -- generates list of shared objects for which we need to
+# simulate dynamic loading
+
+# don't run if we're not linking with any modules
+if [ $# -eq 0 ]; then
+	exit 0;
+fi
+
+# grab required modules
+modules=$*
+
+# find library directories
+archlib=`${PERL} -MConfig -e 'print $Config{installarchlib}'`
+sitelib=`${PERL} -MConfig -e 'print $Config{installsitelib}'`
+privlib=`${PERL} -MConfig -e 'print $Config{installprivlib}'`
+archname=`${PERL} -MConfig -e 'print $Config{archname}'`
+dlext=`${PERL} -MConfig -e 'print $Config{dlext}'`
+
+# find paths to all shared objects
+for m in ${modules}; do
+	relpath=`echo ${m} | sed -e 's%::%/%g'`
+	lib=`find ${archlib}/auto/${relpath} ${sitelib}/${archname}/auto/${relpath} ${privlib}/auto/${relpath} -type f -name \*.${dlext} -print 2>/dev/null`
+	libs="${libs} ${lib}"
+done
+
+echo $libs

@@ -1,0 +1,57 @@
+=head1 NAME
+
+extproc_perl - Oracle Perl Procedure Library
+
+=head1 SYNOPSIS
+
+=head2 FUNCTION SYNTAX
+
+=over 4
+
+select perl_sub('sub1','1','2') from dual;
+
+=back
+
+=head2 PROCEDURE SYNTAX
+
+=over 4
+
+exec perl_sub('sub2','arg1');
+
+=back
+
+=head1 DESCRIPTION
+
+extproc_perl enables Oracle stored procedures and functions to be written
+in Perl.  It uses Oracle 8's external procedure interface to create Perl
+interpreters on the fly to execute Perl subroutines.  Code is stored in
+a central "bootstrap" file that is interpreted after each interpreter is
+initialized.  In the current implementation of Oracle external procedures,
+the Perl interpreter is persistent for the life of a client session.  This
+has the effect of keeping both interpreted code and data in memory for the
+life of that particular session.
+
+=head1 MODULES
+
+The Oracle external procedure process and DynaLoader do not work well
+together.  In fact, DynaLoader doesn't work at all in this environment.
+Therefore, in order to use dynamically loaded modules like Socket, hooks for
+each module need to be compiled into the extproc_perl shared library.  This
+means that for each module you want to use, you must declare it at build time.
+The Makefile.PL file provides gives you the option of declaring these modules.
+Note that this restriction does not apply to Perl-only modules, but it's safe
+to declare them as well during this process -- they will be ignored.
+
+ExtProc is a module that is statically linked into the extproc_perl object.
+It provides several functions that interact with the Oracle database itself.
+See the ExtProc(3) manpage for details.
+
+=head1 AUTHOR
+
+Jeff Horwitz <jeff@smashing.org>
+
+=head1 SEE ALSO
+
+perl(1), perlembed(1), ExtProc(3)
+
+=cut

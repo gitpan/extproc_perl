@@ -1,0 +1,172 @@
+$Id: INSTALL,v 1.2 2001/08/20 17:32:43 jhorwitz Exp $
+
+INSTALLATION PROCEDURE
+
+1) Verify you are using a Perl distribution with a shared libperl.  The
+   following command will tell you this:
+
+   perl -MConfig -e 'print "$Config{useshrplib}\n"'
+
+   If you are not using a shared libperl, you will have to rebuild Perl using
+   the 'useshrplib' configure option as follows:
+
+   sh Configure -Duseshrplib
+
+   You can also configure perl to use a shared libperl using the interactive
+   configure.  	If you need to rebuild perl, it is recommended that you install
+   a separate distribution specifically for Oracle, since using a shared
+   libperl may have some unforeseen consequences for your existing production
+   scripts!
+
+2) Set the ORACLE_HOME environment variable to the correct path.  If you don't
+   know what this means, ask your friendly DBA.
+
+3) Edit Makefile.PL and add any additional includes or libraries you may need.
+
+4) In the usual Perl fashion, type 'perl Makefile.PL' to begin the
+   configuration process.
+
+5) If all goes well, you will be asked to list the Perl modules you'd like to
+   use in the Oracle Perl interpreter.  Unfortunately, at least on Solaris,
+   DynaLoader is not able to dynamically load shared objects from within the
+   Oracle external procedure process.  This shared object deficiency is
+   documented in Oracle's own documentation, so we must live with it.  This
+   limitation does not apply to Perl-only modules.  See the MODULES file for
+   more detailed information.
+
+   Enter the list of modules you'd potentially use with this interpreter,
+   separated by spaces.  You only need to consider libraries with shared
+   objects (usually compiled from C), but if you enter a Perl-only module,
+   it will simply be ignored.  Several commonly used defaults are provided,
+   but you'll probably want to add some more.
+
+6) Enter the path to the Perl bootstrap file.  This file contains the Perl
+   subroutines that you will call from Oracle.  It should be written exactly
+   like any other Perl script, except that you need a "return 1;" at the end
+   of the script.  This may break testing with "perl -cw" -- a fix is being
+   investigated.
+
+7) The Makefile should have been written in the previous step.  Type 'make' to
+   build extproc_perl and the ExtProc Perl module.
+
+8) Type 'make install' to install the ExtProc Perl module.  ExtProc provides
+   a Perl interface to some Oracle internal data structures and a cursory
+   query interface (not yet available via Perl).
+
+9) Copy the extproc_perl shared object (probably extproc_perl.so) to a location
+   that an Oracle process can access.  This should probably not be on an NFS
+   mounted partition.  $ORACLE_HOME/lib might be appropriate.
+
+10) Create a bootstrap file.  See step 6 for details.
+
+NOTE: STEPS 11 - 13 MAY REQUIRE ADMINISTRATIVE ACCESS TO YOUR ORACLE DATABASE
+
+11) Define a listener for the external procedure process.  In your
+    tnsnames.ora file, it should look something like this:
+
+    extproc_connection_data =
+      (DESCRIPTION =
+        (ADDRESS =
+          (PROTOCOL = IPC)
+          (KEY = callout)
+        )
+        (CONNECT_DATA =
+          (SID = callout)
+        )
+      )
+
+12) In Oracle, define a library to be used for external procedures.  It should
+    look like this:
+
+   CREATE OR REPLACE LIBRARY PERL_LIB IS
+      '/u01/app/oracle/product/8.1.7/lib/extproc_perl.so';
+
+   Substitute the real path to the extproc_perl library.
+
+13) Create the 'perl' function -- this will be the programmer's interface
+    to Perl from Oracle.  It will call the function ora_perl_sub from the
+    PERL_LIB library defined above.  ora_perl_sub provides a generic hook
+    into the Perl interpreter, and is defined as follows: 
+
+    char *ora_perl_sub(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
+
+       ctx: the OCI context.  This is provided by the CONTEXT argument when
+          you specify "WITH CONTEXT" during function creation.
+
+       ret_ind: the return value indicator.  Used to tell Oracle if the return
+          value is NULL or NOT NULL, since C has no concept of what Oracle
+          calls "nullity."
+
+       sub: the name of the Perl subroutine.
+
+       ...: scalar arguments to the subroutine.  Each argument must be a
+          string, and must be followed by an indicator pointer of type
+          (OCIInd *).  The list of arguments must be terminated by a NULL
+          argument (an Oracle NULL, not a C NULL).
+
+    The following statement will create the 'perl' function.  To provide
+    a generic interface to Perl, it should accept as many arguments as
+    possible.  To avoid PL/SQL errors, the arguments should default to
+    NULL if not specified.  We use a dummy argument at the end of the
+    function call to provide a NULL argument that ends the list.  The
+    following statement, taken from extproc_sample.sql, provides an
+    interface for subroutines with up to three arguments that return
+    a single scalar value:
+
+       CREATE OR REPLACE FUNCTION perl (
+          sub IN VARCHAR2, arg1 in VARCHAR2 default NULL,
+          arg2 in VARCHAR2 default NULL, arg3 in VARCHAR2 default NULL,
+          dummy in VARCHAR2 default NULL)
+       RETURN STRING AS
+       EXTERNAL NAME "ora_perl_sub"
+       LIBRARY "PERL_LIB"
+       WITH CONTEXT
+       PARAMETERS (
+          CONTEXT,
+          RETURN INDICATOR BY REFERENCE,
+          sub string,
+          arg1 string,
+          arg1 INDICATOR short,
+          arg2 string,
+          arg2 INDICATOR short,
+          arg3 string,
+          arg3 INDICATOR short,
+          dummy string,
+          dummy INDICATOR short);
+
+    Now you can use the 'perl' function to call real Perl subroutines from
+    your bootstrap file.  For example, here is a simple select statement that
+    will call the Perl subroutine 'mysub' with one argument.  The select
+    statement will return any return values from the function as well:
+
+       select perl('mysub') from dual;
+
+    This statement calls 'mysub' with three arguments.
+
+       select perl('mysub','foo','bar','123') from dual;
+
+    Here is a procedure that calls 'mysub' with no arguments:
+
+       CREATE OR REPLACE PROCEDURE mysub IS
+          DUMMY varchar(1);
+       BEGIN
+          select perl('mysub') into DUMMY from dual;
+       END;
+
+       exec mysub;
+
+    And here is a function that takes two scalar arguments a returns a scalar
+    value from the Perl subroutine 'myfunc':
+
+       CREATE OR REPLACE FUNCTION myfunc (
+          arg1 in VARCHAR2 default NULL,
+          arg2 in VARCHAR2 default NULL)
+       RETURN VARCHAR2 IS
+          retval in VARCHAR2(256);
+       BEGIN
+          select perl('myfunc',arg1,arg2) into retval from dual;
+          RETURN retval;
+       END;
+
+    select myfunc('a','b') from dual;
+
