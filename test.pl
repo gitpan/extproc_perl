@@ -1,4 +1,4 @@
-# $Id: test.pl,v 1.5 2004/02/26 04:04:52 jeff Exp $
+# $Id: test.pl,v 1.9 2004/04/12 15:57:32 jeff Exp $
 
 use DBI;
 use Cwd;
@@ -310,10 +310,9 @@ $r = $dbh->do(qq{
 -- create code table
 	CREATE TABLE EPTEST_USER_PERL_SOURCE (
 		name VARCHAR2(255) primary key,
-		language VARCHAR2(16),
-		last_modified_user VARCHAR2(255),
-		last_modified_date DATE,
-		code VARCHAR2(4000)
+		plsql_spec VARCHAR2(255),
+		language VARCHAR2(255),
+		code CLOB
 	)
 });
 
@@ -344,6 +343,7 @@ CREATE OR REPLACE VIEW eptest_perl_config AS (
 		TestPerl.config('max_sub_args') as MAX_SUB_ARGS,
 		TestPerl.config('trusted_code_directory') as TRUSTED_CODE_DIRECTORY,
 		TestPerl.config('tainting') as TAINTING,
+		TestPerl.config('ddl_format') as DDL_FORMAT,
 		TestPerl.config('session_namespace') as SESSION_NAMESPACE,
 		TestPerl.config('package_subs') as PACKAGE_SUBS
 	from dual

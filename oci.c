@@ -1,4 +1,4 @@
-/* $Id: oci.c,v 1.6 2004/01/10 02:02:55 jeff Exp $ */
+/* $Id: oci.c,v 1.11 2004/04/11 21:06:11 jeff Exp $ */
 
 #include <oci.h>
 #include <EXTERN.h>
@@ -38,21 +38,21 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 	OCIDefine *def1 = (OCIDefine *) 0;
 	OCIDefine *def2 = (OCIDefine *) 0;
 	OCIBind *bind1 = (OCIBind *) 0;
-	int err;
+	OCIInd ind1, ind2, ind3;
+	OCILobLocator *lobl;
+	int err, loblen, amtp;
+	boolean flag;
 	
 	EP_DEBUGF(c, "IN fetch_code(%p, %p, \"%s\")", c, code, name);
 
 	err = ep_OCIExtProcGetEnv(c);
 
-	/* allocate code buffer */
-	buf = OCIExtProcAllocCallMemory(c->oci_context.ctx, c->max_code_size);
-
-	snprintf(sql, 255, "select code, language from %s where name = :name", c->code_table);
-
 	if (err) {
 		ora_exception(c,"getenv");
 		return(err);
 	}
+
+	snprintf(sql, 255, "select code, language from %s where name = :name", c->code_table);
 
 	err = OCIHandleAlloc(this_ctxp->envhp,
 		(dvoid **)&this_ctxp->stmtp,
@@ -77,20 +77,28 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		return(err);
 	}
 
+	err = OCIDescriptorAlloc(this_ctxp->envhp, (dvoid *)&lobl,
+		OCI_DTYPE_LOB, 0, 0);
+
+	if (err) {
+		ora_exception(c,"OCIDescriptorAlloc");
+		return(err);
+	}
+
 	err = OCIDefineByPos(this_ctxp->stmtp,
 		&def1,
 		this_ctxp->errhp,
 		1,
-		buf,
-		4000,
-		SQLT_STR,
-		(dvoid *) 0,
+		&lobl,
+		-1,
+		SQLT_CLOB,
+		&ind1,
 		(dvoid *) 0,
 		(dvoid *) 0,
 		OCI_DEFAULT);
 
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
-		ora_exception(c,"define1");
+		ora_exception(c, "define1");
 		return(err);
 	}
 
@@ -99,9 +107,9 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		this_ctxp->errhp,
 		2,
 		code->language,
-		16,
+		255,
 		SQLT_STR,
-		(dvoid *) 0,
+		&ind2,
 		(dvoid *) 0,
 		(dvoid *) 0,
 		OCI_DEFAULT);
@@ -144,6 +152,7 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		if (err != OCI_NO_DATA) {
 			ora_exception(c,"exec");
 		}
+		OCIHandleFree(this_ctxp->stmtp, OCI_HTYPE_STMT);
 		return(err);
 	}
 
@@ -153,10 +162,48 @@ int fetch_code(EP_CONTEXT *c, EP_CODE *code, char *name)
 		return(err);
 	}
 
-	code->code = buf;
+	/* if code is NULL, this is a stub -- code is in bootstrap file */
+	if (ind1 == OCI_IND_NULL) {
+		EP_DEBUG(c, "code is NULL -- will check symbol table for CV");
+		code->code = NULL;
+	}
+	else {
+		err = OCILobLocatorIsInit(this_ctxp->envhp, this_ctxp->errhp, lobl, &flag);
+		if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+			ora_exception(c, "OCILobLocatorIsInit");
+			return(err);
+		}
+		if (!flag) {
+			ora_exception(c, "LOB locator is not initialized");
+			return(err);
+		}
+		err = OCILobGetLength(this_ctxp->svchp, this_ctxp->errhp, lobl,
+			&loblen);
+		if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+			ora_exception(c, "OCILobGetLength");
+			return(err);
+		}
+		if (loblen > c->max_code_size) {
+			ora_exception(c, "code too large for buffer");
+			return(-1);
+		}
+		amtp = loblen;
+		buf = OCIExtProcAllocCallMemory(this_ctxp->ctx, amtp+1);
+		err = OCILobRead(this_ctxp->svchp, this_ctxp->errhp, lobl,
+			&amtp, 1, (dvoid *)buf, c->max_code_size, 0, 0, 0,
+			SQLCS_IMPLICIT);
+		if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+			ora_exception(c, "OCILobRead");
+			return(err);
+		}
+		buf[amtp] = '\0';
+
+		code->code = buf;
+	}
 
 	return(OCI_SUCCESS);
 }
+
 int get_sessionid(EP_CONTEXT *c, int *sessionid)
 {
 	char *sql;
@@ -164,7 +211,7 @@ int get_sessionid(EP_CONTEXT *c, int *sessionid)
 	OCIDefine *def1 = (OCIDefine *) 0;
 	int err;
 	
-	EP_DEBUGF(c, "IN get_sessionid(%p)", c);
+	EP_DEBUGF(c, "IN get_sessionid(%p, %p)", c, sessionid);
 
 	err = ep_OCIExtProcGetEnv(c);
 
@@ -204,6 +251,86 @@ int get_sessionid(EP_CONTEXT *c, int *sessionid)
 		sessionid,
 		sizeof(int),
 		SQLT_INT,
+		(dvoid *) 0,
+		(dvoid *) 0,
+		(dvoid *) 0,
+		OCI_DEFAULT);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"define1");
+		return(err);
+	}
+
+	err = OCIStmtExecute(this_ctxp->svchp,
+		this_ctxp->stmtp,
+		this_ctxp->errhp,
+		1,
+		0,
+		NULL,
+		NULL,
+		OCI_DEFAULT);
+
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"exec");
+		return(err);
+	}
+
+	err = OCIHandleFree(this_ctxp->stmtp, OCI_HTYPE_STMT);
+	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
+		ora_exception(c,"OCIHandleFree");
+		return(err);
+	}
+
+	return(OCI_SUCCESS);
+}
+
+int get_dbname(EP_CONTEXT *c, char *dbname)
+{
+	char *sql;
+	ocictx *this_ctxp = &(c->oci_context);
+	OCIDefine *def1 = (OCIDefine *) 0;
+	int err;
+	
+	EP_DEBUGF(c, "IN get_dbname(%p, %p)", c, dbname);
+
+	err = ep_OCIExtProcGetEnv(c);
+
+	if (err) {
+		ora_exception(c,"getenv");
+		return(err);
+	}
+
+	err = OCIHandleAlloc(this_ctxp->envhp,
+		(dvoid **)&this_ctxp->stmtp,
+		OCI_HTYPE_STMT,
+		0,
+		0);
+
+	if (err) {
+		ora_exception(c,"handlealloc");
+		return(err);
+	}
+
+	sql = "select ora_database_name from dual";
+	err = OCIStmtPrepare(this_ctxp->stmtp,
+		this_ctxp->errhp,
+		(text *) sql,
+		strlen(sql),
+		OCI_NTV_SYNTAX,
+		OCI_DEFAULT);
+
+	if (err) {
+		ora_exception(c,"prepare");
+		return(err);
+	}
+
+	err = OCIDefineByPos(this_ctxp->stmtp,
+		&def1,
+		this_ctxp->errhp,
+		1,
+		(text *)dbname,
+		255, /* should be max length of database name */
+		SQLT_STR,
 		(dvoid *) 0,
 		(dvoid *) 0,
 		(dvoid *) 0,
@@ -293,7 +420,7 @@ char *ocidate_to_string(EP_CONTEXT *c, OCIDate *d, char *fmt)
 	);
 
 	if ((err != OCI_SUCCESS) && (err != OCI_SUCCESS_WITH_INFO)) {
-		ora_exception(c,"OCIDateFromText");
+		ora_exception(c,"OCIDateToText");
 		s = NULL;
 	}
 

@@ -1,7 +1,4 @@
-$Id: TODO,v 1.13 2004/02/10 16:26:09 jeff Exp $
+$Id: TODO,v 1.15 2004/04/12 16:01:54 jeff Exp $
 
-* more config values for ExtProc::config()
-* autoload certain ExtProc subroutines to save on compile time
-* object oriented interface to subroutines (function & procedure methods, etc.)
-* rewrite Code.pm to be coherent and more scalable
-* support for LOB locators as parameters
+* support for LOB locators as parameters and return values
+* support for arrays as parameters and return values

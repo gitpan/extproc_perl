@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.12 2004/02/14 19:45:44 jeff Exp $ */
+/* $Id: config.c,v 1.15 2004/04/11 21:06:40 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,8 +21,10 @@ extern "C" {
 int read_config(EP_CONTEXT *c, char *fn)
 {
 	FILE *fp;
-	char line[1024], err[256], key[1024], val[1024], *p;
-	int len, i, n = 0;
+	char line[1024], err[256], key[1024], val[1024], db[256], mydb[256],
+		*p, *keyp;
+	int res, len, n = 0;
+	unsigned int i;
 
 	/* if we're testing, configure with hardcoded test values */
 	if (c->testing) {
@@ -36,10 +38,19 @@ int read_config(EP_CONTEXT *c, char *fn)
 		c->package_subs = 0;
 		c->max_code_size = 4000;
 		c->max_sub_args = 32;
-		return 1;
+		c->ddl_format = EP_DDL_FORMAT_STANDARD;
+		return(1);
 	}
 	if (!(fp = fopen(fn, "r"))) {
-		return 0;
+		return(0);
+	}
+
+	/* get our database name */
+	res = get_dbname(c, mydb);
+	if (res != OCI_SUCCESS && res != OCI_SUCCESS_WITH_INFO) {
+		ora_exception(c, "get_dbname");
+		fclose(fp);
+		return(0);
 	}
 
 	while(fgets(line, 1024, fp)) {
@@ -63,7 +74,18 @@ int read_config(EP_CONTEXT *c, char *fn)
 		else {
 			snprintf(err, 255, "Bad configuration line %d\n", n);
 			ora_exception(c, err);
+			fclose(fp);
 			return(0);
+		}
+
+		/* parse out database name, if any */
+		if (keyp = index(key, ':')) {
+			strncpy(db, key, keyp-key);
+			/* skip if line doesn't apply to our database */
+			if (strncasecmp(db, mydb, strlen(mydb))) {
+				continue;
+			}
+			strncpy(key, keyp+1, strlen(key));
 		}
 
 		if (!strcmp(key, "code_table")) {
@@ -98,14 +120,29 @@ int read_config(EP_CONTEXT *c, char *fn)
 			c->package_subs = YESORNO(val);
 			continue;
 		}
+		if (!strcmp(key, "ddl_format")) {
+			if (!strncmp(val, "standard", 8)) {
+				c->ddl_format = EP_DDL_FORMAT_STANDARD;
+			}
+			else if (!strncmp(val, "package", 7)) {
+				c->ddl_format = EP_DDL_FORMAT_PACKAGE;
+			}
+			else {
+				ora_exception(c, "illegal DDL format");
+				fclose(fp);
+				return(0);
+			}
+			continue;
+		}
 		if (!strcmp(key, "max_code_size")) {
 			i = atoi(val);
-			if (i < 1 || i > 4000) {
+			if (i < 1 || i > 0xffffffff) {
 				snprintf(err, 255, "Illegal value for max_code_size: '%s'\n", val);
 				ora_exception(c, err);
-				return 0;
+				fclose(fp);
+				return(0);
 			}
-			c->max_code_size = i;
+			c->max_code_size = (int)i;
 			continue;
 		}
 		if (!strcmp(key, "max_sub_args")) {
@@ -113,7 +150,8 @@ int read_config(EP_CONTEXT *c, char *fn)
 			if (i < 0 || i > 128) {
 				snprintf(err, 255, "Illegal value for max_sub_args: '%s'\n", val);
 				ora_exception(c, err);
-				return 0;
+				fclose(fp);
+				return(0);
 			}
 			c->max_sub_args = i;
 			continue;
@@ -122,5 +160,5 @@ int read_config(EP_CONTEXT *c, char *fn)
 
 	fclose(fp);
 
-	return 1;
+	return(1);
 }

@@ -1,14 +1,14 @@
--- $Id: ep_schema.sql.in,v 1.9 2004/02/14 19:45:44 jeff Exp $
+-- $Id: ep_schema.sql.in,v 1.15 2004/04/12 15:35:50 jeff Exp $
 
 -- create code table
 CREATE TABLE -CODETABLE- (
 	name VARCHAR2(255) primary key,
+	plsql_spec VARCHAR2(255),
 	language VARCHAR2(16),
-	last_modified_user VARCHAR2(255),
-	last_modified_date DATE,
-	code VARCHAR2(4000)
+	code CLOB
 );
 
+-- create perl_config view
 CREATE OR REPLACE VIEW perl_config AS (
 	select
 		Perl.config('bootstrap_file') as BOOTSTRAP_FILE,
@@ -20,10 +20,12 @@ CREATE OR REPLACE VIEW perl_config AS (
 		Perl.config('trusted_code_directory') as TRUSTED_CODE_DIRECTORY,
 		Perl.config('tainting') as TAINTING,
 		Perl.config('session_namespace') as SESSION_NAMESPACE,
-		Perl.config('package_subs') as PACKAGE_SUBS
+		Perl.config('package_subs') as PACKAGE_SUBS,
+		Perl.config('ddl_format') as DDL_FORMAT
 	from dual
 );
 
+-- create perl_status view
 CREATE OR REPLACE VIEW perl_status AS (
 	select
 		Perl.version as EXTPROC_PERL_VERSION,

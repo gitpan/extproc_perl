@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.29 2004/02/25 23:22:51 jeff Exp $
+# $Id: Makefile.PL,v 1.30 2004/03/02 19:48:43 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -217,7 +217,7 @@ all: libperlxsi.${dlext}
 perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
 
-.c.o:
+.c.o: extproc_perl.h
 	# need -o argument to keep the path intact from the original source
 	\$(CC) -o \$*.o \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
 

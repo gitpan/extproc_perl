@@ -1,4 +1,16 @@
-$Id: Changes,v 1.16 2004/02/25 23:27:12 jeff Exp $
+$Id: Changes,v 1.19 2004/04/12 16:00:07 jeff Exp $
+
+1.99_08 Mon Apr 12 11:57:09 EDT 2004
+	* per-database configuration directives (dbname:config)
+	* increase theoretical max_code_size to 4 GB
+	* increase default max_code_size to 32768
+	* new option to output DDL in package body format
+	* added ddl_format column in perl_config view
+	* fixed prototype parsing to require FUNCTION/PROCEDURE declaration and
+          to allow an empty argument list
+	* prototypes can now be specified in the perl source
+	* removed obsolete columns from code table
+	* autoload some module subroutines to reduce parsing overhead
 
 1.99_07 Wed Feb 25 18:24:39 EST 2004
 	* fixed crash in perl_config and perl_status views

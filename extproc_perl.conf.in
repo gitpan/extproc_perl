@@ -1,11 +1,17 @@
-# $Id: extproc_perl.conf.in,v 1.7 2004/02/14 19:45:44 jeff Exp $
+# $Id: extproc_perl.conf.in,v 1.11 2004/04/11 21:07:47 jeff Exp $
 
 # extproc_perl configuration
 
-### GENERAL CONFIGURATION ###
-
-# format: key value
+# format: [db:]key value
+# directives apply to all database instances in this ORACLE_HOME
+# db is an optional database name for database-specific directives
+# database-specific directives MUST follow global ones if they co-exist
+# database name is case insensitive
 # comment out all empty settings with a hash (#)
+#
+# GLOBAL & DATABASE CONFIGURATION EXAMPLE:
+# bootstrap_file /tmp/boot.pl
+# db1:bootstrap_file /tmp/db1-boot.pl
 
 # path to bootstrap file
 bootstrap_file -BOOTSTRAP-
@@ -19,13 +25,10 @@ code_table -CODETABLE-
 # path to debug output directory
 debug_directory /tmp
 
-### SECURITY ###
-
 # use taint checking -- this applies globally to all subroutines
 # HIGHLY RECOMMENDED!
 enable_tainting yes
 
-### EXPERIMENTAL
 # use per-session namespaces
 enable_session_namespace yes
 
@@ -38,12 +41,15 @@ enable_package_subs no
 # path to trusted directory that contains imported code files
 trusted_code_directory -TRUSTEDDIR-
 
-### TUNABLES ###
+# format for DDL to create directly executed procedures
+# standard: outputs a CREATE statement you can run directly from sqlplus
+# package: outputs DDL for a package body
+ddl_format standard
 
 # maximum code size per subroutine in bytes
-# must be less than or equal to max size of VARCHAR2 (4000)
+# must be less than or equal to max size of CLOB (4 GB)
 # allocated once per interpreter
-max_code_size 4000
+max_code_size 32768
 
 # maximum arguments to a subroutine (<=  system max, which is usually 128)
 # there is currently no benefit to tuning this

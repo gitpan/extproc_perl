@@ -1,4 +1,15 @@
-$Id: UPGRADE,v 1.2 2004/02/25 23:21:19 jeff Exp $
+$Id: UPGRADE,v 1.3 2004/04/12 16:29:32 jeff Exp $
+
+From 1.99_07 and earlier:
+
+The extproc_perl schema has changed.  Running @ep_schema from sqlplus will
+apply the changes to the views, but not to the code table.  Instead of dropping
+and adding the table and losing your code, use the following alter table
+statements to bring you up to date (replace your-code-table as appropriate):
+
+alter table your-code-table add plsql_spec varchar(255);
+alter table your-code-table drop column last_modified_user;
+alter table your-code-table drop column last_modified_date;
 
 From 1.99_06 and earlier:
 

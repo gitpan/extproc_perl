@@ -1,4 +1,4 @@
-# $Id: dbinit.pl,v 1.1 2004/02/21 21:30:02 jeff Exp $
+# $Id: dbinit.pl,v 1.2 2004/04/11 21:05:29 jeff Exp $
 
 # connect to database and initialize test environment
 
@@ -17,5 +17,10 @@ sub dbinit
 		print "Bail out! Failed to initialize test environment: ",
 			$dbh->errstr, "\n";
 	}
+
+	# FOR DEVELOPMENT: enable debugging & tracing
+	# $dbh->do('BEGIN TestPerl.debug(1); END;');
+	# $dbh->do('alter session set sql_trace true');
+
 	return $dbh;
 }

@@ -1,4 +1,4 @@
-# $Id: 30directexec.t,v 1.1 2004/02/25 23:24:05 jeff Exp $
+# $Id: 30directexec.t,v 1.4 2004/04/12 15:57:15 jeff Exp $
 
 use DBI;
 
@@ -11,7 +11,7 @@ local $dbh->{PrintError} = 0;
 
 # TEST 1
 # create wrapper for eptest_equiv()
-unless($dbh->do("BEGIN TestPerl.create_wrapper('eptest_equiv(x IN VARCHAR2) RETURN VARCHAR2', 'TEST_PERL_LIB'); END;")) {
+unless($dbh->do("BEGIN TestPerl.create_wrapper('FUNCTION eptest_equiv(x IN VARCHAR2) RETURN VARCHAR2', 'TEST_PERL_LIB'); END;")) {
 	print "not ok 1\n";
 	print "Bail out! create_wrapper failed: ", $dbh->errstr, "\n";
 	exit 1;
@@ -36,8 +36,8 @@ print "ok 1\n";
 
 # TEST 2
 # create wrapper for add_proc()
-unless($dbh->do("BEGIN TestPerl.create_wrapper('add_proc(n1 IN PLS_INTEGER, n2 IN PLS_INTEGER, sum OUT PLS_INTEGER)', 'TEST_PERL_LIB'); END;")) {
-	print "not ok 1\n";
+unless($dbh->do("BEGIN TestPerl.create_wrapper('PROCEDURE add_proc(n1 IN PLS_INTEGER, n2 IN PLS_INTEGER, sum OUT PLS_INTEGER)', 'TEST_PERL_LIB'); END;")) {
+	print "not ok 2\n";
 	print "Bail out! create_wrapper failed: ", $dbh->errstr, "\n";
 	exit 1;
 }
@@ -45,7 +45,7 @@ print "ok 2\n";
 
 # TEST 3
 # create wrapper for add_func()
-unless($dbh->do("BEGIN TestPerl.create_wrapper('add_func(n1 IN PLS_INTEGER, n2 IN PLS_INTEGER) RETURN PLS_INTEGER', 'TEST_PERL_LIB'); END;")) {
+unless($dbh->do("BEGIN TestPerl.create_wrapper('FUNCTION add_func(n1 IN PLS_INTEGER, n2 IN PLS_INTEGER) RETURN PLS_INTEGER', 'TEST_PERL_LIB'); END;")) {
 	print "not ok 3\n";
 	print "Bail out! create_wrapper failed: ", $dbh->errstr, "\n";
 	exit 1;

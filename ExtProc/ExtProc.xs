@@ -1,4 +1,4 @@
-/* $Id: ExtProc.xs,v 1.10 2004/02/01 21:49:06 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.12 2004/04/11 21:06:40 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +23,18 @@ typedef OCIDate *ExtProc__DataType__OCIDate;
 
 MODULE = ExtProc		PACKAGE = ExtProc		
 PROTOTYPES: disable
+
+void
+new(class)
+	char *class;
+
+	PREINIT:
+	SV *sv;
+
+	PPCODE:
+	sv = sv_newmortal();
+	sv_setref_pv(sv, class, newHV());
+	XPUSHs(sv);
 
 void
 ora_exception(msg)
@@ -116,6 +128,9 @@ config(name)
 	}
 	else if (strEQ(name, "trusted_code_directory")) {
 		XPUSHs(newSVpv(my_contextp->trusted_dir, 0));
+	}
+	else if (strEQ(name, "ddl_format")) {
+		XPUSHs(newSViv(my_contextp->ddl_format));
 	}
 	else {
 		ora_exception(my_contextp, "unknown configuration directive");

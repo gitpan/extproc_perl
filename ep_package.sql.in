@@ -1,4 +1,4 @@
--- $Id: ep_package.sql.in,v 1.7 2004/02/10 16:26:09 jeff Exp $
+-- $Id: ep_package.sql.in,v 1.9 2004/04/11 21:04:36 jeff Exp $
 
 -- create PERL_LIB library
 CREATE OR REPLACE LIBRARY PERL_LIB IS

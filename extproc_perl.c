@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.30 2004/02/25 23:16:21 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.34 2004/04/12 16:00:07 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.99_07"
+#define EXTPROC_PERL_VERSION	"1.99_08"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -875,6 +875,15 @@ char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCII
 	else if (!strncmp(param, "max_sub_args", 12)) {
 		*ret_ind = OCI_IND_NOTNULL;
 		snprintf(res, 1024, "%d", c->max_sub_args);
+	}
+	else if (!strncmp(param, "ddl_format", 10)) {
+		*ret_ind = OCI_IND_NOTNULL;
+		if (c->ddl_format == EP_DDL_FORMAT_STANDARD) {
+			strcpy(res, "STANDARD");
+		}
+		if (c->ddl_format == EP_DDL_FORMAT_PACKAGE) {
+			strcpy(res, "PACKAGE");
+		}
 	}
 	else {
 		ora_exception(c, "ora_perl_config: unknown parameter");

@@ -1,4 +1,4 @@
-# $Id: ExtProc.pm,v 1.17 2004/02/25 23:16:21 jeff Exp $
+# $Id: ExtProc.pm,v 1.19 2004/04/12 16:00:07 jeff Exp $
 
 package ExtProc;
 
@@ -21,7 +21,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_07';
+our $VERSION = '1.99_08';
 
 # destructor functions -- should be per-session
 # can't easily put in ExtProc object due to ep_fini, but probably should
@@ -43,13 +43,14 @@ sub put_line
         $dbh->do("BEGIN DBMS_OUTPUT.PUT_LINE('$string'); END;");
 }
 
-sub new
-{
-	my $class = shift;
-	my $self = {};
-	bless $self, $class;
-	return $self;
-}
+# implemented in XS for speed
+#sub new
+#{
+#	my $class = shift;
+#	my $self = {};
+#	bless $self, $class;
+#	return $self;
+#}
 
 # for print functionality via PUT_LINE
 sub fh
