@@ -1,4 +1,11 @@
-$Id: Changes,v 1.20 2004/04/14 23:39:53 jeff Exp $
+$Id: Changes,v 1.21 2004/04/20 17:59:06 jeff Exp $
+
+2.00	Tue Apr 20 13:54:35 EDT 2004
+	* Added "new" method for creating new OCIDate objects
+	* Added "setdate_sysdate" method for setting OCIDate objects to current
+	  system date/time
+	* Added "ddl_format" procedure for overriding default ddl_format
+	* Updated bundled documentation
 
 1.99_09	Thu Apr 15 13:26:05 EDT 2004
 	* better runtime error reporting

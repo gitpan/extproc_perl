@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.38 2004/04/14 23:39:53 jeff Exp $
+# $Id: Code.pm,v 1.40 2004/04/20 18:33:32 jeff Exp $
 
 package ExtProc::Code;
 
@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_09';
+our $VERSION = '2.00';
 
 use ExtProc qw(ep_debug put_line);
 use File::Spec;
@@ -589,6 +589,9 @@ _DONE_
 		}
 	}
 	$sql .= "\n);";
+	if ($ddl_format == 0) {
+		$sql .= "\n/\n";
+	}
 
 	# write DDL to file
 	local *DDL;

@@ -1,4 +1,4 @@
--- $Id: ep_package.sql.in,v 1.9 2004/04/11 21:04:36 jeff Exp $
+-- $Id: ep_package.sql.in,v 1.10 2004/04/20 16:09:33 jeff Exp $
 
 -- create PERL_LIB library
 CREATE OR REPLACE LIBRARY PERL_LIB IS
@@ -26,6 +26,7 @@ AS
 	FUNCTION version RETURN STRING;
 	PROCEDURE flush;
 	PROCEDURE debug(enable in PLS_INTEGER);
+	PROCEDURE ddl_format(fmt in VARCHAR2);
 	FUNCTION debug_file RETURN STRING;
 	FUNCTION debug_status RETURN STRING;
 	FUNCTION config(param in VARCHAR2) RETURN STRING;
@@ -141,6 +142,17 @@ AS
 			enable INT
 		);
 
+	-- set DDL format
+	PROCEDURE ddl_format(fmt in VARCHAR2)
+		AS
+		EXTERNAL NAME "ora_perl_ddl_format"
+		LIBRARY "PERL_LIB"
+		WITH CONTEXT
+		PARAMETERS (
+			CONTEXT,
+			fmt string
+		);
+		
 	-- return path to debug file
 	FUNCTION debug_file
 		RETURN STRING AS

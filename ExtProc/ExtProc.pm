@@ -1,4 +1,4 @@
-# $Id: ExtProc.pm,v 1.20 2004/04/14 23:39:53 jeff Exp $
+# $Id: ExtProc.pm,v 1.23 2004/04/20 17:59:06 jeff Exp $
 
 package ExtProc;
 
@@ -21,7 +21,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_09';
+our $VERSION = '2.00';
 
 # destructor functions -- should be per-session
 # can't easily put in ExtProc object due to ep_fini, but probably should
@@ -255,6 +255,18 @@ ExtProc::DataType::OCIDate.  You can manipulate the date and time values within
 by using the methods documented below.
 
 =over 4
+
+=item new()
+
+Creates a new NULL date object.  Use as follows:
+
+use ExtProc;
+
+$date = ExtProc::DataType::OCIDate->new;
+
+=item setdate_sysdate()
+
+Set the DATE to the current system date & time.
 
 =item is_null()
 

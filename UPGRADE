@@ -1,4 +1,4 @@
-$Id: UPGRADE,v 1.5 2004/04/12 19:18:10 jeff Exp $
+$Id: UPGRADE,v 1.6 2004/04/20 16:09:52 jeff Exp $
 
 From 1.99_07 and earlier:
 
@@ -12,3 +12,11 @@ From 1.99_06 and earlier:
 Build and install extproc_perl as usual.  There were numerous bug fixes in the
 C wrapper code for directly executed procedures, so you will need to recreate
 the wrappers using Perl.create_wrapper and relink using "make -f perlxsi.mk".
+
+From 1.03 and earlier:
+
+There is no direct upgrade path, but this should get you going.  Back up all
+your Perl source.  Install extproc_perl 2.0 using a different bootstrap file
+and a different name for the code table as you did for 1.03 (or use a different
+schema).  Update your code to work with changes to the ExtProc module and
+reimport your code.

@@ -1,4 +1,4 @@
-# $Id: Util.pm,v 1.12 2004/04/14 23:39:53 jeff Exp $
+# $Id: Util.pm,v 1.13 2004/04/20 17:59:06 jeff Exp $
 
 package ExtProc::Util;
 
@@ -17,7 +17,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_09';
+our $VERSION = '2.00';
 
 use ExtProc;
 

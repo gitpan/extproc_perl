@@ -1,4 +1,4 @@
-/* $Id: ExtProc.xs,v 1.13 2004/04/14 23:39:53 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.15 2004/04/20 16:22:39 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -143,6 +143,22 @@ config(name)
 MODULE = ExtProc	PACKAGE = ExtProc::DataType::OCIDate	PREFIX = EPDT_OCIDate_
 PROTOTYPES: disable
 
+ExtProc::DataType::OCIDate EPDT_OCIDate_new(void)
+	CODE:
+	New(0, RETVAL, 1, OCIDate);
+	set_null(RETVAL);
+
+	OUTPUT:
+	RETVAL
+
+void
+EPDT_OCIDate_setdate_sysdate(d)
+	ExtProc::DataType::OCIDate d
+
+	CODE:
+	OCIDateSysDate(my_contextp->oci_context.errhp, d);
+	clear_null(d);
+
 void
 EPDT_OCIDate_getdate(d)
 	ExtProc::DataType::OCIDate d
@@ -204,8 +220,13 @@ EPDT_OCIDate_to_char(d, fmt)
 	char *string;
 
 	CODE:
-	string = ocidate_to_string(my_contextp, d, fmt);
-	RETVAL = sv_2mortal(newSVpv(string, 0));
+	if (is_null(d)) {
+		RETVAL = sv_2mortal(newSVsv(&PL_sv_undef));
+	}
+	else {
+		string = ocidate_to_string(my_contextp, d, fmt);
+		RETVAL = sv_2mortal(newSVpv(string, 0));
+	}
 
 	OUTPUT:
 	RETVAL

@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.36 2004/04/14 23:39:53 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.38 2004/04/20 17:59:06 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.99_09"
+#define EXTPROC_PERL_VERSION	"2.00"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -683,6 +683,30 @@ void ora_perl_debug(OCIExtProcContext *ctx, int enable)
 	else {
 		EP_DEBUG(c, "STOP");
 		ep_debug_disable(c);
+	}
+}
+
+/* Perl.ddl_format procedure */
+void ora_perl_ddl_format(OCIExtProcContext *ctx, char *fmt)
+{
+	EP_CONTEXT *c = &my_context;
+
+	dTHX;
+
+	_ep_init(c, ctx);
+
+	EP_DEBUGF(c, "IN ora_perl_ddl_format(%p, %s)", ctx, fmt);
+
+	if (!strncasecmp(fmt, "standard", 8)) {
+		c->ddl_format = EP_DDL_FORMAT_STANDARD;
+		EP_DEBUG(c, "-- set DDL format to EP_DDL_FORMAT_STANDARD");
+	}
+	else if(!strncasecmp(fmt, "package", 7)) {
+		c->ddl_format = EP_DDL_FORMAT_PACKAGE;
+		EP_DEBUG(c, "-- set DDL format to EP_DDL_FORMAT_PACKAGE");
+	}
+	else {
+		ora_exception(c, "invalid DDL format");
 	}
 }
 
