@@ -5,7 +5,7 @@
  * All rights reserved.
  */
 
-/* $Id: extproc_perl.c,v 1.38 2003/06/18 17:02:07 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.47 2003/07/20 17:27:22 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,12 +24,12 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.01"
+#define EXTPROC_PERL_VERSION	"1.02"
 
 #define PERL_NO_GET_CONTEXT
 
 static PerlInterpreter *perl;
-static char code_table[256];
+static char code_table[256] = "";
 ocictx this_ctx; /* for ExtProc module & DBI */
 int _connected; /* for collaboration between extproc_perl & DBI */
 
@@ -161,7 +161,9 @@ PerlInterpreter *pl_startup(void)
 
 	if (!perl_parse(p, xs_init, argc, argv, NULL)) {
 		if (!perl_run(p)) {
+#if 0
 			load_module(aTHX_ PERL_LOADMOD_NOIMPORT,(SV*)newSVpv("ExtProc",0),Nullsv);
+#endif
 			EP_DEBUG("-- Bootstrapping successful!");
 			return(p);
 		}
@@ -312,14 +314,34 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 
 	/* check for version request */
 	if (!strncmp(sub, "_version", 8)) {
+		char *version;
+		version = OCIExtProcAllocCallMemory(ctx, 255);
+		*version = '\0';
+		snprintf(version, 235, "extproc_perl %s/Perl %s",
+			EXTPROC_PERL_VERSION, PERL_VERSION_STRING);
+#ifdef EP_DEBUGGING
+		strncat(version, " DEBUGGING", 10);
+#endif
+#ifdef EP_TAINTING
+		strncat(version, " TAINTING", 9);
+#endif
 		*ret_ind = OCI_IND_NOTNULL;
-		return(EXTPROC_PERL_VERSION);
+		return(version);
 	}
 
 	/* check for module list request */
 	if (!strncmp(sub, "_modules", 8)) {
 		*ret_ind = OCI_IND_NOTNULL;
 		return(STATIC_MODULES);
+	}
+
+	/* check for code table change */
+	if (!strncmp(sub, "_codetable", 10)) {
+		if (args[0]) {
+			strncpy(code_table, args[0], 255);
+		}
+		*ret_ind = OCI_IND_NOTNULL;
+		return(code_table);
 	}
 
 	/* start perl interpreter if necessary */
@@ -330,30 +352,24 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 			ora_exception(ctx, "pl_startup failed -- check bootstrap file with 'perl -cw'");
 			return("\0");
 		}
-		/* set code table */
-		strncpy(code_table, CODE_TABLE, 255);
+		/* set code table if it hasn't been set already */
+		if (!strlen(code_table)) {
+			EP_DEBUGF("initializing code table to %s", CODE_TABLE);
+			strncpy(code_table, CODE_TABLE, 255);
+		}
 	}
 
 	/* the following special subs must be run AFTER the perl interpreter */
 	/* has been initialized */
 
 	/* check for request to load code from the database */
-	if (!strncmp(sub, "_preload", 10)) {
+	if (!strncmp(sub, "_preload", 8)) {
 		get_code(ctx, code_table, code);
 		TAINT_NOT;
 		eval_pv(code, TRUE);
 		TAINT;
 		*ret_ind = OCI_IND_NULL;
 		return("\0");
-	}
-
-	/* check for code table change */
-	if (!strncmp(sub, "_codetable", 10)) {
-		if (args[0]) {
-			strncpy(code_table, args[0], 255);
-		}
-		*ret_ind = OCI_IND_NOTNULL;
-		return(code_table);
 	}
 
 	/* check for error message request */
@@ -382,7 +398,7 @@ char *ora_perl_func(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, ...)
 	}
 
 	/* check for eval request */
-	if (!strncmp(sub, "_eval", 6)) {
+	if (!strncmp(sub, "_eval", 5)) {
 		evalsv = eval_pv(args[0], FALSE);
 		if (SvTRUE(ERRSV)) {
 			ora_exception(ctx, SvPV(ERRSV, PL_na));
@@ -484,6 +500,17 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 		return;
 	}
 
+	/* check for code table change */
+	if (!strncmp(sub, "_codetable", 10)) {
+		if (args[0]) {
+			strncpy(code_table, args[0], 255);
+		}
+		else {
+			ora_exception(ctx, "can't return codetable from a procedure'");
+		}
+		return;
+	}
+
 	/* start perl interpreter if necessary */
 	if (!perl) {
 		perl = pl_startup();
@@ -492,14 +519,17 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 			return;
 		}
 		/* set code table */
-		strncpy(code_table, CODE_TABLE, 255);
+		if (!strlen(code_table)) {
+			EP_DEBUGF("initializing code table to %s", CODE_TABLE);
+			strncpy(code_table, CODE_TABLE, 255);
+		}
 	}
 
 	/* the following special subs must be run AFTER the perl interpreter */
 	/* has been initialized */
 
 	/* check for request to load code from the database */
-	if (!strncmp(sub, "_preload", 10)) {
+	if (!strncmp(sub, "_preload", 8)) {
 		get_code(ctx, code_table, code);
 		TAINT_NOT;
 		eval_pv(code, TRUE);
@@ -507,19 +537,8 @@ void ora_perl_proc(OCIExtProcContext *ctx, char *sub, ...)
 		return;
 	}
 
-	/* check for code table change */
-	if (!strncmp(sub, "_codetable", 10)) {
-		if (args[0]) {
-			strncpy(code_table, args[0], 255);
-		}
-		else {
-			ora_exception(ctx, "can't return codetable from a procedure'");
-			return;
-		}
-	}
-
 	/* check for eval request */
-	if (!strncmp(sub, "_eval", 6)) {
+	if (!strncmp(sub, "_eval", 5)) {
 		eval_pv(args[0], FALSE);
 		if (SvTRUE(ERRSV)) {
 			ora_exception(ctx, SvPV(ERRSV, PL_na));

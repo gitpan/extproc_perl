@@ -5,7 +5,7 @@
  * All rights reserved.
  */
 
-/* $Id: ExtProc.xs,v 1.9 2003/05/22 16:38:47 jeff Exp $ */
+/* $Id: ExtProc.xs,v 1.10 2003/06/23 18:39:26 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,13 +115,12 @@ user()
 	simple_query(this_ctx.ctx, sql, res, 0);
 	XPUSHs(sv_2mortal(newSVpv(res, PL_na)));
 
-#ifdef EP_DEBUGGING
-
 void
 ep_debug(msg)
 	char *msg;
 
 	CODE:
+#ifdef EP_DEBUGGING
 	ep_debug(msg);
-
 #endif /* EP_DEBUGGING */
+

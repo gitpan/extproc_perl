@@ -3,7 +3,7 @@
 # Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
 
-# $Id: ExtProc.pm,v 1.21 2003/06/17 22:06:32 jeff Exp $
+# $Id: ExtProc.pm,v 1.23 2003/07/15 21:42:49 jeff Exp $
 
 package ExtProc;
 
@@ -24,7 +24,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 bootstrap ExtProc $VERSION;
 
@@ -112,8 +112,8 @@ dbi_connect for more information.
  my $dbh = ExtProc->dbi_connect();
 
 NOTE: External procedures are stateless, so there is no concept of a persistent
-connection to the database.  Therefore, you must run the DBI->connect method
-once per transaction.
+connection to the database.  Therefore, you must run the ExtProc->dbi_connect
+method once per transaction.
 
 =item ep_debug(message)
 

@@ -1,4 +1,4 @@
-$Id: README.special,v 1.8 2003/05/22 15:54:51 jeff Exp $
+$Id: README.special,v 1.11 2003/07/20 17:10:59 jeff Exp $
 
 The following subroutines are reserved for extproc_perl and may be called
 like any other Perl subroutine from Oracle.
@@ -6,7 +6,8 @@ like any other Perl subroutine from Oracle.
 _flush() -- Destroys Perl interpreter and all Perl data.  A new interpreter
    will be started for the next query.
 
-_version() -- Reports the version of the currently loaded extproc_perl.
+_version() -- Reports the version and configuration options of the currently
+   loaded extproc_perl.
 
 _modules() -- Returns a space separated list of modules that were requested to
    be statically linked into extproc_perl.

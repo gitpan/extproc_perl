@@ -60,7 +60,7 @@ for the next query.
 
 =item _version()
 
-Reports the version of the currently loaded extproc_perl.
+Reports the version and configuration options of the currently loaded extproc_perl.
 
 =item _modules()
 

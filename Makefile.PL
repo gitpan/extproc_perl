@@ -3,13 +3,11 @@
 # Copyright (c) 2001, 2002, 2003 Jeff Horwitz (jeff@smashing.org).
 # All rights reserved.
 
-# $Id: Makefile.PL,v 1.19 2003/06/16 01:46:59 jeff Exp $
+# $Id: Makefile.PL,v 1.24 2003/07/20 17:26:56 jeff Exp $
 
 # Makefile generator for extproc_perl
 
 use Config;
-
-my $DEFAULT_MODS = "IO Socket attrs Fcntl DBI DBD::Oracle";
 
 print "Verifying configuration...\n\n";
 
@@ -34,19 +32,25 @@ print "You are not using a threads-enabled Perl.  Good.\n";
 # what is the path to perl?
 my $perl = $Config{'perlpath'};
 
+# what version are we using?
+my $perl_version = $Config{'version'};
+
 # what is the extension for shared libraries?
 my $dlext = $Config{'dlext'};
 
-# figure out which modules to include
-if ( -r ".modules" ) {
-	if (open(FILE, ".modules")) {
-		$DEFAULT_MODS = <FILE>;
-		chomp($DEFAULT_MODS);
-		close(FILE);
-	}
-	else {
-		print STDERR "couldn't open .modules (don't worry): $!";
-	}
+# set some defaults
+$DEFAULT_MODS = "IO Socket attrs Fcntl DBI DBD::Oracle";
+$DEFAULT_BOOTSTRAP = "${oracle_home}/lib/extproc_perl_boot.pl";
+$DEFAULT_CODE_TABLE = "extproc_perl_code";
+$DEFAULT_DEBUGGING = "no";
+$DEFAULT_TAINTING = "yes";
+
+# load config from previous run
+if ( -r '.config' ) {
+	eval { require '.config'; };
+}
+else {
+	print STDERR "No cached configuration (don't worry): $!\n";
 }
 	
 print <<_DONE_;
@@ -70,14 +74,6 @@ if ($mods =~ /^\+(.*)/) {
 	$mods = "$DEFAULT_MODS $1";
 }
 
-if (open(FILE, ">.modules")) {
-	print FILE "$mods\n";
-	close(FILE);
-}
-else {
-	print STDERR "couldn't save module list.  Don't worry about it.";
-}
-
 print <<_DONE_;
 
 extproc_perl can parse a global bootstrap file that contains Perl code shared
@@ -89,7 +85,6 @@ the database.  If you do not want this feature enabled at all, specify
 
 _DONE_
 
-my $DEFAULT_BOOTSTRAP = "${oracle_home}/lib/extproc_perl_boot.pl";
 print "Path to bootstrap file [${DEFAULT_BOOTSTRAP}]: ";
 my $bootfile = <STDIN>;
 chomp $bootfile;
@@ -105,7 +100,6 @@ here.  You can change it dynamically using the special function _codetable.
 
 _DONE_
 
-my $DEFAULT_CODE_TABLE = "extproc_perl_code";
 print "Table to query [${DEFAULT_CODE_TABLE}]: ";
 my $code_table = <STDIN>;
 chomp $code_table;
@@ -121,7 +115,6 @@ production installations, as there is a performance penalty.
 
 _DONE_
 
-my $DEFAULT_DEBUGGING = "no";
 print "Would you like to enable debugging (yes/no) [${DEFAULT_DEBUGGING}]? ";
 my $debugging = <STDIN>;
 chomp $debugging;
@@ -140,7 +133,6 @@ See the perlsec(1) man page for more information on tainting.
 
 _DONE_
 
-my $DEFAULT_TAINTING = "yes";
 print "Would you like to enable taint checks (yes/no) [${DEFAULT_TAINTING}]? ";
 my $tainting = <STDIN>;
 chomp $tainting;
@@ -148,6 +140,71 @@ unless ($tainting) {
 	$tainting = $DEFAULT_TAINTING;
 }
 my $TAINTING_DEF = ($tainting =~ /^y/i) ? "-DEP_TAINTING" : "";
+
+print "Would you like to configure a database to test (yes/no) [yes]? ";
+my ($dbname,$dbuser,$dbpass);
+my $dotest = <STDIN>;
+chomp $dotest;
+if ($dotest =~ /^y/i || $dotest eq '') {
+	print "What Oracle database should I run the tests on [$DEFAULT_DBNAME]? ";
+	$dbname = <STDIN>;
+	chomp $dbname;
+	unless ($dbname) {
+		$dbname = $DEFAULT_DBNAME;
+	}
+
+	print "Specify a username I can use to connect to $dbname [$DEFAULT_DBUSER]: ";
+	$dbuser = <STDIN>;
+	chomp $dbuser;
+	unless ($dbuser) {
+		$dbuser = $DEFAULT_DBUSER;
+	}
+
+	print "${dbuser}'s password on $dbname [*hidden*]: ";
+	system("stty -echo");
+	$dbpass = <STDIN>;
+	chomp $dbpass;
+	system("stty echo");
+	print "\n";
+	unless ($dbpass) {
+		$dbpass = $DEFAULT_DBPASS;
+	}
+
+	print "Writing test configuration...\n";
+	open(FILE, ">t/eptest.pl") or die $!;
+	print FILE <<_DONE_;
+\$db_user = '$dbuser';
+\$db_pass = '$dbpass';
+\$db_name = '$dbname';
+\$tainting = '$TAINTING_DEF';
+\$debugging = '$DEBUG_DEF';
+1;
+
+sub my_connect
+{
+        return DBI->connect("dbi:Oracle:\$db_name", \$db_user, \$db_pass);
+}
+_DONE_
+	close(FILE);
+}
+else {
+	print "Okay, but you won't be able to run any tests!\n";
+	sleep 1;
+}
+
+print "Writing configuration cache...\n";
+open(FILE, ">.config") or die $!;
+print FILE <<_DONE_;
+\$DEFAULT_MODS = '$mods';
+\$DEFAULT_BOOTSTRAP = '$bootfile';
+\$DEFAULT_CODE_TABLE = '$code_table';
+\$DEFAULT_DEBUGGING = '$debugging';
+\$DEFAULT_TAINTING = '$tainting';
+\$DEFAULT_DBNAME = '$dbname';
+\$DEFAULT_DBUSER = '$dbuser';
+\$DEFAULT_DBPASS = '$dbpass';
+_DONE_
+close(FILE);
 
 my $CC = $Config{'cc'};
 my $LD = $Config{'ld'};
@@ -167,24 +224,24 @@ OPT=${OPT}
 PERL=${perl}
 ORACLE_HOME=${oracle_home}
 MODULES=ExtProc ${mods}
-CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\"" $DEBUG_DEF $TAINTING_DEF
+CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_VERSION_STRING=\\"${perl_version}\\" -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\"" $DEBUG_DEF $TAINTING_DEF
 
-OBJS=extproc_perl.o perlxsi.o simple_query.o ExtProc.o
+OBJS=extproc_perl.o perlxsi.o simple_query.o
 
 all: extproc_perl.${dlext}
 
 perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
 
-ExtProc.o: extproc_perl.h ExtProc/ExtProc.xs
-	(cd ExtProc ; \$(MAKE) all)
-	cp -f ExtProc/ExtProc.o .
+ExtProc.a: extproc_perl.h ExtProc/ExtProc.xs
+	(cd ExtProc ; \$(MAKE))
+	cp -f ExtProc/blib/arch/auto/ExtProc/ExtProc.a .
 
 .c.o:
 	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
 
-extproc_perl.${dlext}: \$(OBJS)
-	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) `PERL=\$(PERL) sh gen_module_libs \${MODULES}`
+extproc_perl.${dlext}: \$(OBJS) ExtProc.a
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) `PERL=\$(PERL) sh gen_module_libs \${MODULES}` ExtProc.a
 
 install: all
 	(cd ExtProc ; \$(MAKE) install)
@@ -193,12 +250,15 @@ install: all
 	\@echo "*** You will specify the path to this file in your SQL library definition."
 
 clean:
-	rm -f *.o extproc_perl.so perlxsi.c Makefile
+	rm -f *.o extproc_perl.${dlext} ExtProc.a perlxsi.c Makefile t/eptest.pl
 	(cd ExtProc ; \$(MAKE) clean)
 
 distclean:
-	rm -f *.o extproc_perl.so perlxsi.c Makefile Makefile.old .modules
+	rm -f *.o extproc_perl.${dlext} perlxsi.c Makefile Makefile.old .config
 	(cd ExtProc ; \$(MAKE) realclean)
+
+test:	all
+	PERL_DL_NONLAZY=1 \$(PERL) -e 'use Test::Harness qw(&runtests); runtests \@ARGV;' t/*.t
 _DONE_
 
 print "Configuring ExtProc module\n";

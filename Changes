@@ -1,4 +1,15 @@
-$Id: Changes,v 1.16 2003/06/18 17:07:39 jeff Exp $
+$Id: Changes,v 1.19 2003/07/20 17:34:51 jeff Exp $
+1.02	Sun Jul 20 13:24:29 EDT 2003
+	* ExtProc::ep_debug should is now a no-op when debugging is not
+	  enabled
+	* Running _codetable as a procedure no longer returns an "INVALID
+	  SUBROUTINE" error
+	* fixed reset of codetable when new interpreter is started
+	* A test suite is now included for "make test"
+	* _version now returns configuration options in addition to version
+	* ExtProc module is now linked statically (no .so files) into
+          extproc_perl.  This prevents version conflicts and facilitates
+          testing outside of production.
 
 1.01	Wed Jun 18 13:04:17 EDT 2003
 	* Tainting configuration option now sets CC defines properly
