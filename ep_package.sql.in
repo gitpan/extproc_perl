@@ -1,4 +1,4 @@
--- $Id: ep_package.sql.in,v 1.6 2003/12/27 22:52:17 jeff Exp $
+-- $Id: ep_package.sql.in,v 1.7 2004/02/10 16:26:09 jeff Exp $
 
 -- create PERL_LIB library
 CREATE OR REPLACE LIBRARY PERL_LIB IS
@@ -205,7 +205,8 @@ AS
 		PARAMETERS (
 			CONTEXT,
 			RETURN INDICATOR BY REFERENCE,
-			param STRING
+			param STRING,
+			param INDICATOR short
 		);
 
 	-- eval arbitrary perl code

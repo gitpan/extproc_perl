@@ -1,8 +1,11 @@
-# $Id: Makefile.PL,v 1.22 2004/02/01 21:47:38 jeff Exp $
+# $Id: Makefile.PL,v 1.29 2004/02/25 23:22:51 jeff Exp $
 
 # Makefile generator for extproc_perl
 
 use Config;
+use Cwd;
+
+my $build_dir = getcwd();
 
 print "Verifying configuration...\n\n";
 
@@ -93,9 +96,11 @@ if ($mods =~ /^\+(.*)/) {
 
 print <<_DONE_;
 
-If you are using Oracle 9.2.0 or higher, external procedure libraries must be
-located in \$ORACLE_HOME/lib or another path in the EXTPROC_DLLS environment
-variable (see Oracle documentation for details).
+NOTE: If you are using Oracle 9.2.0 or higher, external procedure libraries
+must must be located in \$ORACLE_HOME/lib or else you will need include the
+path to the each library in the EXTPROC_DLLS environment variable for your
+listener.  Failure to do this will result in an ORA-28595 error.  See Oracle
+documentation for details.
 
 _DONE_
 print "Where should I install the extproc_perl libraries [$DEFAULT_INST_PATH]? ";
@@ -205,6 +210,7 @@ CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public
 INST_DIR=${instpath}
 ORA_USER=${ora_user}
 ORA_GROUP=${ora_group}
+TEST_SUBROUTINES=t/add_func.o t/add_proc.o t/eptest_equiv.o
 
 all: libperlxsi.${dlext}
 
@@ -212,12 +218,20 @@ perlxsi.c:
 	\$(PERL) -MExtUtils::Embed -e xsinit -- -o STDOUT -std \$(MODULES) | grep -v boot_DynaLoader > \$@
 
 .c.o:
-	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
+	# need -o argument to keep the path intact from the original source
+	\$(CC) -o \$*.o \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
 
-libperlxsi.${dlext}: perlxsi.o \$(SUBROUTINES) libExtProc.${dlext}
+all: libperlxsi.${dlext}
+
+libperlxsi.${dlext}: perlxsi.o \$(SUBROUTINES) \$(INST_DIR)/libExtProc.${dlext}
 	[ -f "\$@" ] && mv \$@ \$@.old
-	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(SUBROUTINES) -L. \$(RFLAG)\$(INST_DIR) -lExtProc
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(SUBROUTINES) -L\$(INST_DIR) \$(RFLAG)\$(INST_DIR) -lExtProc
 	rm -f perlxsi.c perlxsi.o
+
+libperlxsi_test.${dlext}: perlxsi.o \$(TEST_SUBROUTINES) ${build_dir}/libExtProc.${dlext}
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(TEST_SUBROUTINES) -L${build_dir} \$(RFLAG)${build_dir} -lExtProc
+
+test: libperlxsi_test.${dlext}
 _DONE_
 close(FILE);
 
@@ -236,9 +250,10 @@ PERL=${perl}
 INSTALL=./install-sh
 ORACLE_HOME=${oracle_home}
 MODULES=ExtProc ${mods}
-CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_VERSION_STRING=\\"${perl_version}\\" -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\"" -DEP_CONFIG_FILE="\\"${confdir}/extproc_perl.conf\\""
+CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_VERSION_STRING=\\"${perl_version}\\" -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\"" -DEP_CONFIG_FILE="\\"${confdir}/extproc_perl.conf\\"" -DBUILD_DIR=\\"${build_dir}\\"
 
 OBJS=extproc_perl.o oci.o config.o
+TESTOBJS=testcode.o
 XSIOBJS=perlxsi.o
 CONFS=extproc_perl.conf ep_package.sql ep_schema.sql
 
@@ -266,8 +281,14 @@ libExtProc.${dlext}: extproc_perl.h ExtProc/ExtProc.xs
 libperlxsi.${dlext}: \$(XSIOBJS) libExtProc.${dlext}
 	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(XSIOBJS) `\$(PERL) gen_module_libs \${MODULES}` -L. \$(RFLAG)${instpath} -lExtProc
 
+libperlxsi_test.${dlext}: \$(XSIOBJS) libExtProc.${dlext}
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(XSIOBJS) `\$(PERL) gen_module_libs \${MODULES}` -L. \$(RFLAG)${build_dir} -lExtProc
+
 extproc_perl.${dlext}: \$(OBJS) libperlxsi.${dlext}
 	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) -L. ${RFLAG}${trusted_dir} libperlxsi.${dlext}
+
+extproc_perl_test.${dlext}: \$(OBJS) \$(TESTOBJS) libperlxsi_test.${dlext}
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(OBJS) \$(TESTOBJS) -L. ${RFLAG}${build_dir} libperlxsi_test.${dlext}
 
 install: all
 	\$(INSTALL) -c -m 555 -o ${ora_user} -g ${ora_group} extproc_perl.${dlext} ${instpath}
@@ -280,8 +301,11 @@ install: all
 	[ -f ${confdir}/extproc_perl.conf ] || \$(INSTALL) -c -m 644 -o ${ora_user} -g ${ora_group} extproc_perl.conf ${confdir}
 	(cd ExtProc ; \$(MAKE) install)
 
+test: extproc_perl_test.${dlext}
+	\$(PERL) test.pl t/*.t
+
 clean:
-	rm -f *.o extproc_perl.${dlext} libperlxsi.${dlext} libExtProc.${dlext} perlxsi.c perlxsi.mk Makefile \$(CONFS)
+	rm -f *.o extproc_perl*.${dlext} libperlxsi*.${dlext} libExtProc.${dlext} perlxsi.c perlxsi.mk Makefile \$(CONFS) t/*.c t/*.sql t/*.o
 	(cd ExtProc ; \$(MAKE) clean)
 
 distclean: clean

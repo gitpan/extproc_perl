@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.h,v 1.12 2004/02/01 21:49:06 jeff Exp $ */
+/* $Id: extproc_perl.h,v 1.13 2004/02/14 19:45:44 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -34,6 +34,7 @@ struct ep_context {
 	FILE *debug_fp;		/* debug file descriptor */
 	char package[256];	/* optional session namespace */
 	int subtype;		/* function or procedure? */
+	int testing;		/* are we just testing? */
 
 	/* initialized from configuration file */
 	char code_table[256];
@@ -43,7 +44,6 @@ struct ep_context {
 	char trusted_dir[MAXPATHLEN];
 	int use_namespace;
 	int tainting;
-	int opcode_security;
 	int package_subs;
 	int max_code_size;
 	int max_sub_args;

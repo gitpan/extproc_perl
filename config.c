@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.11 2004/01/09 21:14:16 jeff Exp $ */
+/* $Id: config.c,v 1.12 2004/02/14 19:45:44 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +24,20 @@ int read_config(EP_CONTEXT *c, char *fn)
 	char line[1024], err[256], key[1024], val[1024], *p;
 	int len, i, n = 0;
 
+	/* if we're testing, configure with hardcoded test values */
+	if (c->testing) {
+		strcpy(c->code_table, "test_user_perl_source");
+		strcpy(c->bootstrap_file, ""); /* will be filled in later */
+		strcpy(c->debug_dir, "/tmp");
+		strcpy(c->inc_path, "");
+		strcpy(c->trusted_dir, ""); /* will be filled in later */
+		c->use_namespace = 1;
+		c->tainting = 1;
+		c->package_subs = 0;
+		c->max_code_size = 4000;
+		c->max_sub_args = 32;
+		return 1;
+	}
 	if (!(fp = fopen(fn, "r"))) {
 		return 0;
 	}
@@ -78,10 +92,6 @@ int read_config(EP_CONTEXT *c, char *fn)
 		}
 		if (!strcmp(key, "enable_tainting")) {
 			c->tainting = YESORNO(val);
-			continue;
-		}
-		if (!strcmp(key, "enable_opcode_security")) {
-			c->opcode_security = YESORNO(val);
 			continue;
 		}
 		if (!strcmp(key, "enable_package_subs")) {

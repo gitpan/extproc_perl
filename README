@@ -1,4 +1,4 @@
-$Id: README,v 1.2 2003/12/27 23:46:47 jeff Exp $
+$Id: README,v 1.3 2004/02/15 17:10:08 jeff Exp $
 
 extproc_perl enables Oracle stored procedures and functions to be written
 in Perl.  It uses Oracle's external procedure interface to create Perl
@@ -23,3 +23,33 @@ DOCUMENTATION
 There is a comprehensive user's guide available on the web at
 http://www.smashing.org/extproc_perl/userguide.html.  This is the official
 documentation for extproc_perl.
+
+TESTING
+-------
+Before you run 'make test', you need to do several things to set up your
+environment, some of which you may be familiar with from DBD::Oracle:
+
+* Set the ORACLE_SID environment variable to the name of your database.
+* Set the ORACLE_USERID environment variable with your username and password
+  separated by a slash (e.g. user1/foobar).
+* If you are using Oracle 9.2.0 or higher, add the following line to the
+  SID_DESC section of your external procedure listener configuration:
+
+  (ENVS="EXTPROC_DLLS=/path/to/your/build/directory/extproc_perl_test.so")
+
+  Replace /path/to/your/build/directory with the absolute path to the directory
+  containing the extproc_perl source code.  You configuration should look
+  something like this:
+
+    (SID_DESC =
+      (SID_NAME = PLSExtProc)
+      (ORACLE_HOME = /u01/app/oracle/product/9.2.0)
+      (PROGRAM = extproc32)
+      (ENVS="EXTPROC_DLLS=/home/jeff/build/extproc_perl2/extproc_perl_test.so")
+    )
+
+  Reload the listener with 'lsnrctl reload' and you should be ready to test.
+
+  IMPORTANT!!!  Remove this configuration once you're finished testing.  The
+  test version of extproc_perl enables some testing features that are not
+  suitable for production use.

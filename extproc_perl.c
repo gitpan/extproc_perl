@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.27 2004/02/01 22:03:23 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.30 2004/02/25 23:16:21 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION	"1.99_06"
+#define EXTPROC_PERL_VERSION	"1.99_07"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -48,9 +48,12 @@ void _ep_init(EP_CONTEXT *c, OCIExtProcContext *ctx)
 {
 	int err, sessionid;
 
-	/* initialize ep_debug to a sane value */
+	/* initialize debug & testing to sane values */
 	if (c->debug != 1) {
 		c->debug = 0;
+	}
+	if (c->testing != 1) {
+		c->testing = 0;
 	}
 
 	/* save OCI context for later */
@@ -763,6 +766,7 @@ char *ora_perl_errno(OCIExtProcContext *ctx, OCIInd *ret_ind)
 		*ret_ind = OCI_IND_NOTNULL;
 	}
 	else {
+		res = NULL;
 		*ret_ind = OCI_IND_NULL;
 	}
 
@@ -787,13 +791,14 @@ char *ora_perl_errsv(OCIExtProcContext *ctx, OCIInd *ret_ind)
 		*ret_ind = OCI_IND_NOTNULL;
 	}
 	else {
+		res = NULL;
 		*ret_ind = OCI_IND_NULL;
 	}
 
 	return res;
 }
 
-char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCIInd *param_ind)
+char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCIInd param_ind)
 {
 	EP_CONTEXT *c = &my_context;
 	char *res;
@@ -804,7 +809,7 @@ char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCII
 
 	EP_DEBUGF(c, "IN ora_perl_config(%p)", ctx);
 
-	if (*param_ind == OCI_IND_NULL) {
+	if (param_ind == OCI_IND_NULL) {
 		ora_exception(c, "ora_perl_config: passed NULL parameter");
 		*ret_ind = OCI_IND_NULL;
 		return NULL;
@@ -823,15 +828,6 @@ char *ora_perl_config(OCIExtProcContext *ctx, OCIInd *ret_ind, char *param, OCII
 	else if (!strncmp(param, "session_namespace", 17)) {
 		*ret_ind = OCI_IND_NOTNULL;
 		if (c->use_namespace) {
-			strcpy(res, "ENABLED");
-		}
-		else {
-			strcpy(res, "DISABLED");
-		}
-	}
-	else if (!strncmp(param, "opcode_security", 15)) {
-		*ret_ind = OCI_IND_NOTNULL;
-		if (c->opcode_security) {
 			strcpy(res, "ENABLED");
 		}
 		else {

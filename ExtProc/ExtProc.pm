@@ -1,4 +1,4 @@
-# $Id: ExtProc.pm,v 1.16 2004/02/01 22:03:23 jeff Exp $
+# $Id: ExtProc.pm,v 1.17 2004/02/25 23:16:21 jeff Exp $
 
 package ExtProc;
 
@@ -21,7 +21,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_06';
+our $VERSION = '1.99_07';
 
 # destructor functions -- should be per-session
 # can't easily put in ExtProc object due to ep_fini, but probably should

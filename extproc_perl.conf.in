@@ -1,4 +1,4 @@
-# $Id: extproc_perl.conf.in,v 1.6 2003/11/28 21:51:09 jeff Exp $
+# $Id: extproc_perl.conf.in,v 1.7 2004/02/14 19:45:44 jeff Exp $
 
 # extproc_perl configuration
 
@@ -28,10 +28,6 @@ enable_tainting yes
 ### EXPERIMENTAL
 # use per-session namespaces
 enable_session_namespace yes
-
-### NOT IMPLEMENTED YET
-# use Safe module to run code using opcode masks -- EXPERIMENTAL
-enable_opcode_security no
 
 # allow fully-qualified subroutine names in Perl.func & Perl.proc
 # this lets you run any subroutine in any imported package, regardless of

@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.29 2004/02/01 22:03:23 jeff Exp $
+# $Id: Code.pm,v 1.31 2004/02/25 23:03:10 jeff Exp $
 
 package ExtProc::Code;
 
@@ -19,7 +19,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '1.99_06';
+our $VERSION = '1.99_07';
 
 use ExtProc;
 use File::Spec;
@@ -73,11 +73,12 @@ my %typemap = (
 # prefix for C functions to avoid name clashes with standard C library
 our $c_prefix = "EP_";
 
-# create_wrapper(proto)
+# create_wrapper(proto,[lib])
 # create C wrapper function in trusted code directory based on prototype
+# and optional library
 sub create_wrapper
 {
-	my $proto = shift;
+	my ($proto, $lib) = @_;
 
 	# @args holds all information about each argument
 	# @args = ( { spec => x, type => x, inout => x, carg => x } )
@@ -382,7 +383,7 @@ _DONE_
 			if ($args[$n]{'inout'} =~ /OUT/) {
 				if ($args[$n]{'carg'} =~ /^char /) {
 					print CODE <<_DONE_;
-	if (!SvTRUE(svcache[$n])) {
+	if (!SvOK(svcache[$n])) {
 		*is_null_$n = OCI_IND_NULL;
 	}
 	else {
@@ -405,10 +406,16 @@ _DONE_
 _DONE_
 				}
 				elsif ($args[$n]{'carg'} =~ /^int /) {
-					print CODE "\t*arg$n = SvIV(svcache[$n]);\n";
+					print CODE <<_DONE_;
+	*arg$n = SvIV(svcache[$n]);
+	*is_null_$n = SvOK(svcache[$n]) ? OCI_IND_NOTNULL : OCI_IND_NULL;
+_DONE_
 				}
 				elsif ($args[$n]{'carg'} =~ /^float /) {
-					print CODE "\t*arg$n = SvNV(svcache[$n]);\n";
+					print CODE <<_DONE_;
+	*arg$n = SvNV(svcache[$n]);
+	*is_null_$n = SvOK(svcache[$n]) ? OCI_IND_NOTNULL : OCI_IND_NULL;
+_DONE_
 				}
 				else {
 					die "unsupported C datatype: $args[$n]{'carg'} (was $args[$n]{'spec'})";
@@ -436,10 +443,16 @@ _DONE_
 _DONE_
 			if ($crettype =~ /char\s*\*/) {
 				print CODE <<_DONE_;
-	tmp = SvPV(sv,len);
-	New(0, res, len+1, char);
-	Copy(tmp, res, len, char);
-	res[len] = '\\0';
+	if (SvOK(sv)) {
+		tmp = SvPV(sv,len);
+		New(0, res, len+1, char);
+		Copy(tmp, res, len, char);
+		res[len] = '\\0';
+		*ret_ind = OCI_IND_NOTNULL;
+	}
+	else {
+		*ret_ind = OCI_IND_NULL;
+	}
 _DONE_
 			}
 			elsif ($crettype =~ /OCIDate\s*\*/) {
@@ -484,7 +497,7 @@ _DONE_
 		print SPEC "CREATE OR REPLACE ", ($rettype eq 'void') ?
 			"PROCEDURE" : "FUNCTION", " $proto\n";
 		print SPEC "AS EXTERNAL NAME \"EP_$name\"\n";
-		print SPEC "LIBRARY \"PERL_LIB\"\n";
+		print SPEC "LIBRARY \"", $lib ? $lib : "PERL_LIB", "\"\n";
 		print SPEC "WITH CONTEXT\n";
 		print SPEC "PARAMETERS (\n";
 		print SPEC "   CONTEXT";

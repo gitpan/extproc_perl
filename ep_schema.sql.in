@@ -1,4 +1,4 @@
--- $Id: ep_schema.sql.in,v 1.8 2003/12/27 22:52:17 jeff Exp $
+-- $Id: ep_schema.sql.in,v 1.9 2004/02/14 19:45:44 jeff Exp $
 
 -- create code table
 CREATE TABLE -CODETABLE- (
@@ -20,7 +20,6 @@ CREATE OR REPLACE VIEW perl_config AS (
 		Perl.config('trusted_code_directory') as TRUSTED_CODE_DIRECTORY,
 		Perl.config('tainting') as TAINTING,
 		Perl.config('session_namespace') as SESSION_NAMESPACE,
-		Perl.config('opcode_security') as OPCODE_SECURITY,
 		Perl.config('package_subs') as PACKAGE_SUBS
 	from dual
 );

@@ -1,4 +1,13 @@
-$Id: Changes,v 1.12 2004/02/01 21:58:03 jeff Exp $
+$Id: Changes,v 1.16 2004/02/25 23:27:12 jeff Exp $
+
+1.99_07 Wed Feb 25 18:24:39 EST 2004
+	* fixed crash in perl_config and perl_status views
+	* implemented preliminary test suite for "make test"
+	* fixed "always NULL" VARCHAR2 return values in directly executed code
+	* fixed missing null indicators for numeric IN OUT & OUT parameters
+	* removed pending support for opcode security
+	* removed DBD-Oracle 1.14 patch from distribution -- 1.15 includes the
+	  patched code
 
 1.99_06 Sun Feb  1 16:55:17 EST 2004
 	* ExtProc module is now built as a shared object

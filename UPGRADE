@@ -1,8 +1,7 @@
-$Id: UPGRADE,v 1.1 2004/02/01 21:54:25 jeff Exp $
+$Id: UPGRADE,v 1.2 2004/02/25 23:21:19 jeff Exp $
 
-From 1.99_05 and earlier:
+From 1.99_06 and earlier:
 
-Build and install extproc_perl as usual.  The C wrapper code has changed to
-support NULL indicator checking on Oracle data types, so you will need to
-recreate the wrappers for each directly executed procedure you have and relink
-using "make -f perlxsi.mk".
+Build and install extproc_perl as usual.  There were numerous bug fixes in the
+C wrapper code for directly executed procedures, so you will need to recreate
+the wrappers using Perl.create_wrapper and relink using "make -f perlxsi.mk".
