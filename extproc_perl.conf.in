@@ -1,4 +1,4 @@
-# $Id: extproc_perl.conf.in,v 1.11 2004/04/11 21:07:47 jeff Exp $
+# $Id: extproc_perl.conf.in,v 1.12 2006/04/06 00:22:02 jeff Exp $
 
 # extproc_perl configuration
 
@@ -54,3 +54,7 @@ max_code_size 32768
 # maximum arguments to a subroutine (<=  system max, which is usually 128)
 # there is currently no benefit to tuning this
 max_sub_args 32
+
+# check code table for changes at each subroutine invocation and reparse
+# any changed subroutines.  adds a bit of overhead, but good for development.
+reparse_subs yes

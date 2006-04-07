@@ -1,4 +1,4 @@
-/* $Id: testcode.c,v 1.4 2004/02/21 21:30:02 jeff Exp $ */
+/* $Id: testcode.c,v 1.5 2006/04/05 20:38:58 jeff Exp $ */
 
 /* This code will only be included in the testing version of extproc_perl.so */
 
@@ -29,23 +29,23 @@ extern EP_CONTEXT my_context;
 /* sets up engine for testing before installation */
 void ora_perl_test(OCIExtProcContext *ctx)
 {
-	EP_CONTEXT *c = &my_context;
+    EP_CONTEXT *c = &my_context;
 
-	dTHX;
+    dTHX;
 
-	/* set up for testing */
-	c->testing = 1;
-	_ep_init(c, ctx);
+    /* set up for testing */
+    c->testing = 1;
+    _ep_init(c, ctx);
 
-	/* change trusted code directory */
-	strcpy(c->trusted_dir, BUILD_DIR"/t");
+    /* change trusted code directory */
+    strcpy(c->trusted_dir, BUILD_DIR"/t");
 
-	/* change inc_path so we load uninstalled ExtProc.pm */
-	strcpy(c->inc_path, BUILD_DIR"/ExtProc/blib/lib");
+    /* change inc_path so we load uninstalled ExtProc.pm */
+    strcpy(c->inc_path, BUILD_DIR"/ExtProc/blib/lib");
 
-	/* change bootstrap file */
-	strcpy(c->bootstrap_file, BUILD_DIR"/t/testboot.pl");
+    /* change bootstrap file */
+    strcpy(c->bootstrap_file, BUILD_DIR"/t/testboot.pl");
 
-	/* change code table */
-	strcpy(c->code_table, "EPTEST_USER_PERL_SOURCE");
+    /* change code table */
+    strcpy(c->code_table, "EPTEST_USER_PERL_SOURCE");
 }

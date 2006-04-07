@@ -1,4 +1,4 @@
-# $Id: ExtProc.pm,v 1.24 2004/09/16 20:17:42 jeff Exp $
+# $Id: ExtProc.pm,v 1.26 2006/04/07 19:39:55 jeff Exp $
 
 package ExtProc;
 
@@ -12,16 +12,16 @@ require DynaLoader;
 
 our @ISA = qw(Exporter DynaLoader);
 our %EXPORT_TAGS = ( 'all' => [ qw(
-	&ep_debug
-	&ora_exception
-	&is_function
-	&is_procedure
-	&put_line
+    &ep_debug
+    &ora_exception
+    &is_function
+    &is_procedure
+    &put_line
 ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '2.01';
+our $VERSION = '2.50';
 
 # destructor functions -- should be per-session
 # can't easily put in ExtProc object due to ep_fini, but probably should
@@ -38,7 +38,7 @@ sub put_line
                 ExtProc::ora_exception('put_line: string longer than 255 chars');
                 return;
         }
-	my $e = ExtProc->new;
+    my $e = ExtProc->new;
         my $dbh = $e->dbi_connect;
         $dbh->do("BEGIN DBMS_OUTPUT.PUT_LINE('$string'); END;");
 }
@@ -46,86 +46,86 @@ sub put_line
 # implemented in XS for speed
 #sub new
 #{
-#	my $class = shift;
-#	my $self = {};
-#	bless $self, $class;
-#	return $self;
+#    my $class = shift;
+#    my $self = {};
+#    bless $self, $class;
+#    return $self;
 #}
 
 # for print functionality via PUT_LINE
 sub fh
 {
-	my $self = shift;
-	return $self->{'fh'} if $self->{'fh'};
-	my $fh = gensym;
-	bless $fh, 'ExtProc';
-	tie *$fh, $fh;
-	$self->{'fh'} = $fh;
-	return $self->{'fh'};
+    my $self = shift;
+    return $self->{'fh'} if $self->{'fh'};
+    my $fh = gensym;
+    bless $fh, 'ExtProc';
+    tie *$fh, $fh;
+    $self->{'fh'} = $fh;
+    return $self->{'fh'};
 }
 
 # for print functionality via PUT_LINE
 sub TIEHANDLE
 {
-	return $_[0] if ref($_[0]);
-	die "expecting reference in TIEHANDLE";
+    return $_[0] if ref($_[0]);
+    die "expecting reference in TIEHANDLE";
 }
 
 # for print functionality via PUT_LINE
 sub PRINT
 {
-	my ($self, $buf) = @_;
-	put_line($buf);
+    my ($self, $buf) = @_;
+    put_line($buf);
 }
 
 # wrapper around DBI->connect so we don't call OCIExtProcGetEnv twice
 # expects DBI to be loaded already
 sub dbi_connect
 {
-	my ($self, $userattr) = @_;
-	my $dbh;
-	my $attr = (ref($userattr) eq 'HASH') ? $userattr : {};
+    my ($self, $userattr) = @_;
+    my $dbh;
+    my $attr = (ref($userattr) eq 'HASH') ? $userattr : {};
 
-	if (_is_connected()) {
-		$dbh = DBI->connect('dbi:Oracle:extproc', '', '',
-			{ 'ora_context' => context(),
-			  'ora_envhp' => _envhp(),
-			  'ora_svchp' => _svchp(),
-			  'ora_errhp' => _errhp(),
-			  %{$attr}
-			}
-		);
-	}
-	else {
-		$dbh = DBI->connect('dbi:Oracle:extproc', '', '',
-			{ 'ora_context' => context(), %{$attr} } );
+    if (_is_connected()) {
+        $dbh = DBI->connect('dbi:Oracle:extproc', '', '',
+            { 'ora_context' => context(),
+              'ora_envhp' => _envhp(),
+              'ora_svchp' => _svchp(),
+              'ora_errhp' => _errhp(),
+              %{$attr}
+            }
+        );
+    }
+    else {
+        $dbh = DBI->connect('dbi:Oracle:extproc', '', '',
+            { 'ora_context' => context(), %{$attr} } );
 
-		# need to set this even if we fail, cuz GetEnv should succeed
-		# even if the connect fails -- in that case you have other
-		# problems
-		_connected_on();
-	}
+        # need to set this even if we fail, cuz GetEnv should succeed
+        # even if the connect fails -- in that case you have other
+        # problems
+        _connected_on();
+    }
 
-	return $dbh;
+    return $dbh;
 }
 
 sub register_destructor
 {
-	my ($self, $funcref) = @_;
+    my ($self, $funcref) = @_;
 
-	die "bad coderef passed to register_destructor" unless
-		(ref($funcref) eq 'CODE');
+    die "bad coderef passed to register_destructor" unless
+        (ref($funcref) eq 'CODE');
 
-	unshift(@_destructors, $funcref);
+    unshift(@_destructors, $funcref);
 }
 
 # called from ep_fini before interpreter is shut down
 sub destroy
 {
-	my $self = shift;
-	foreach my $code (@_destructors) {
-		&$code();
-	}
+    my $self = shift;
+    foreach my $code (@_destructors) {
+        &$code();
+    }
 }
 
 1;

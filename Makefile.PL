@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.36 2004/05/05 17:59:04 jeff Exp $
+# $Id: Makefile.PL,v 1.39 2006/04/07 19:56:13 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -27,6 +27,10 @@ if ($Config{'usethreads'} eq 'define') {
 }
 print "You are not using a threads-enabled Perl.  Good.\n";
 
+# verify Parse::RecDescent install
+eval 'use Parse::RecDescent';
+die "Could not find Parse::RecDescent.  Please install it, then re-run Makefile.PL.\n" if $@;
+
 # what is the path to perl?
 my $perl = $Config{'perlpath'};
 
@@ -45,9 +49,9 @@ $DEFAULT_GROUP = "dba";
 $DEFAULT_MODS = "IO Socket attrs Fcntl DBI DBD::Oracle";
 $DEFAULT_INST_PATH = "$oracle_home/lib";
 $DEFAULT_CONFIG_DIR = "$oracle_home";
-$DEFAULT_BOOTSTRAP = "$DEFAULT_INST_PATH/extproc_perl_boot.pl";
+$DEFAULT_BOOTSTRAP = "$oracle_home/perl/extproc_perl_boot.pl";
 $DEFAULT_CODE_TABLE = "user_perl_source";
-$DEFAULT_TRUSTED_DIR = "$oracle_home/perl";
+$DEFAULT_TRUSTED_DIR = "$oracle_home/perl/src";
 
 # load config from previous run
 if ( -r '.config' ) {
@@ -192,12 +196,6 @@ print FILE <<_DONE_;
 # Edit the MODULES variable to configure the modules available from extproc_perl
 MODULES=ExtProc ${mods}
 
-# Edit the SUBROUTINES variable to compile C wrappers for Perl subs.  You must
-# have run Perl.create_wrapper for each subroutine listed here.  Add a '.o' to
-# the end of each subroutine name.
-# EXAMPLE: SUBROUTINES=add.o subtract.o multiply.o divide.o
-SUBROUTINES=
-
 ### DO NOT EDIT BELOW THIS LINE ###
 
 CC=${CC}
@@ -210,7 +208,6 @@ CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public
 INST_DIR=${instpath}
 ORA_USER=${ora_user}
 ORA_GROUP=${ora_group}
-TEST_SUBROUTINES=t/add_func.o t/add_proc.o t/eptest_equiv.o
 
 all: libperlxsi.${dlext}
 
@@ -223,13 +220,13 @@ perlxsi.c:
 
 all: libperlxsi.${dlext}
 
-libperlxsi.${dlext}: perlxsi.o \$(SUBROUTINES) \$(INST_DIR)/libExtProc.${dlext}
+libperlxsi.${dlext}: perlxsi.o \$(INST_DIR)/libExtProc.${dlext}
 	[ -f "\$@" ] && mv \$@ \$@.old
-	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(SUBROUTINES) -L\$(INST_DIR) \$(RFLAG)\$(INST_DIR) -lExtProc
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` -L\$(INST_DIR) \$(RFLAG)\$(INST_DIR) -lExtProc
 	rm -f perlxsi.c perlxsi.o
 
-libperlxsi_test.${dlext}: perlxsi.o \$(TEST_SUBROUTINES) ${build_dir}/libExtProc.${dlext}
-	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` \$(TEST_SUBROUTINES) -L${build_dir} \$(RFLAG)${build_dir} -lExtProc
+libperlxsi_test.${dlext}: perlxsi.o ${build_dir}/libExtProc.${dlext}
+	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} perlxsi.o `\$(PERL) gen_module_libs \$(MODULES)` -L${build_dir} \$(RFLAG)${build_dir} -lExtProc
 
 test: libperlxsi_test.${dlext}
 _DONE_
@@ -252,7 +249,7 @@ ORACLE_HOME=${oracle_home}
 MODULES=ExtProc ${mods}
 CPPFLAGS=-I. -I\$(ORACLE_HOME)/rdbms/demo -I\$(ORACLE_HOME)/rdbms/public -DPERL_VERSION_STRING=\\"${perl_version}\\" -DBOOTSTRAP_FILE=\\"${bootfile}\\" -DCODE_TABLE=\\"${code_table}\\" -DSTATIC_MODULES="\\"\$(MODULES)\\"" -DEP_CONFIG_FILE="\\"${confdir}/extproc_perl.conf\\"" -DBUILD_DIR=\\"${build_dir}\\"
 
-OBJS=extproc_perl.o oci.o config.o
+OBJS=extproc_perl.o oci.o config.o wrapper.o
 TESTOBJS=testcode.o
 XSIOBJS=perlxsi.o
 CONFS=extproc_perl.conf ep_package.sql ep_schema.sql ep_upgrade.sql
