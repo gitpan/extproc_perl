@@ -1,4 +1,4 @@
-# $Id: 02status_view.t,v 1.1 2006/04/06 15:18:31 jeff Exp $
+# $Id: 02status_view.t,v 1.2 2006/08/03 16:04:28 jeff Exp $
 
 # test config view
 
@@ -10,6 +10,7 @@ my $dbh = dbinit();
 my $sth;
 
 # extproc_perl_version
+init_test($dbh);
 $sth = $dbh->prepare('SELECT extproc_perl_version FROM eptest_perl_status');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -20,6 +21,7 @@ else {
 }
 
 # debug_status
+init_test($dbh);
 $sth = $dbh->prepare('SELECT debug_status FROM eptest_perl_status');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -30,6 +32,7 @@ else {
 }
 
 # debug_file (debugging is disabled, so this should be null)
+init_test($dbh);
 $sth = $dbh->prepare('SELECT debug_file FROM eptest_perl_status');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -40,6 +43,7 @@ else {
 }
 
 # package
+init_test($dbh);
 $sth = $dbh->prepare('SELECT package FROM eptest_perl_status');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -50,6 +54,7 @@ else {
 }
 
 # errno (should be undef)
+init_test($dbh);
 $sth = $dbh->prepare('SELECT errno FROM eptest_perl_status');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -60,6 +65,7 @@ else {
 }
 
 # errsv (should be undef)
+init_test($dbh);
 $sth = $dbh->prepare('SELECT errsv FROM eptest_perl_status');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];

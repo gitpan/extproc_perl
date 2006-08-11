@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.h,v 1.20 2006/04/05 20:38:58 jeff Exp $ */
+/* $Id: extproc_perl.h,v 1.21 2006/08/01 16:57:07 jeff Exp $ */
 
 #ifndef EXTPROC_PERL_H
 #define EXTPROC_PERL_H
@@ -66,12 +66,12 @@ struct ep_code {
 typedef struct ep_code EP_CODE;
 
 struct ep_arg {
-        void *val;
+    void *val;
     char type;
-        OCIInd *ind;
+    OCIInd *ind;
     char direction;
-    sb4 *len;
-    sb4 *maxlen;
+    STRLEN *len;
+    STRLEN *maxlen;
     SV *sv;
 };
 typedef struct ep_arg EP_ARG;

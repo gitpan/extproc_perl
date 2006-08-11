@@ -1,4 +1,4 @@
-# $Id: 15import.t,v 1.2 2006/04/07 17:30:35 jeff Exp $
+# $Id: 15import.t,v 1.3 2006/08/03 16:04:28 jeff Exp $
 
 # test importing
 
@@ -11,9 +11,11 @@ my $sth;
 my $tmp;
 
 # import_perl
+init_test($dbh);
 ok($dbh->do("BEGIN TestPerl.import_perl('ep_testimport'); END;"), 'import_perl');
 
 # execute
+init_test($dbh);
 undef $tmp;
 $sth = $dbh->prepare("SELECT TestPerl.func('ep_testimport', 'testing 1 2 3') FROM dual");
 if ($sth && $sth->execute()) {
@@ -22,4 +24,5 @@ if ($sth && $sth->execute()) {
 is($tmp, 'testing 1 2 3', 'execute');
 
 # drop_perl
+init_test($dbh);
 ok($dbh->do("BEGIN TestPerl.drop_perl('ep_testimport'); END;")); 

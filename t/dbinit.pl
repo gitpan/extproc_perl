@@ -1,9 +1,20 @@
-# $Id: dbinit.pl,v 1.4 2006/04/07 18:56:16 jeff Exp $
+# $Id: dbinit.pl,v 1.5 2006/08/03 16:04:28 jeff Exp $
 
 # connect to database and initialize test environment
 
 my $dbname = $ENV{'ORACLE_SID'};
 my $dbuser = $ENV{'ORACLE_USERID'};
+
+sub init_test
+{
+    my $dbh = shift;
+    my $rc;
+    foreach (1..2) {
+        $rc = $dbh->do('BEGIN TestPerl.test; END;');
+        last unless (defined($dbh->errstr) && $dbh->errstr =~ /ORA-28576/);
+    }
+    return $rc;
+}
 
 sub dbinit
 {
@@ -11,11 +22,6 @@ sub dbinit
     unless ($dbh) {
         print "Bail out! DBI->connect failed: $DBI::errstr\n";
         exit 1;
-    }
-
-    unless ($dbh->do('BEGIN TestPerl.test; END;')) {
-        print "Bail out! Failed to initialize test environment: ",
-            $dbh->errstr, "\n";
     }
 
     # FOR DEVELOPMENT: enable debugging & tracing

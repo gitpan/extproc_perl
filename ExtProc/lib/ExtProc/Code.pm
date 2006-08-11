@@ -1,4 +1,4 @@
-# $Id: Code.pm,v 1.50 2006/04/07 19:41:09 jeff Exp $
+# $Id: Code.pm,v 1.51 2006/08/11 13:27:35 jeff Exp $
 
 package ExtProc::Code;
 
@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
-our $VERSION = '2.50';
+our $VERSION = '2.51';
 
 use ExtProc qw(ep_debug put_line);
 use File::Spec;

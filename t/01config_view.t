@@ -1,4 +1,4 @@
-# $Id: 01config_view.t,v 1.1 2006/04/06 15:18:31 jeff Exp $
+# $Id: 01config_view.t,v 1.2 2006/08/03 16:04:28 jeff Exp $
 
 # test config view
 
@@ -10,6 +10,7 @@ my $dbh = dbinit();
 my $sth;
 
 # bootstrap_file
+init_test($dbh);
 $sth = $dbh->prepare('SELECT bootstrap_file FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -20,6 +21,7 @@ else {
 }
 
 # code_table
+init_test($dbh);
 $sth = $dbh->prepare('SELECT code_table FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -30,6 +32,7 @@ else {
 }
 
 # inc_path
+init_test($dbh);
 $sth = $dbh->prepare('SELECT inc_path FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -40,6 +43,7 @@ else {
 }
 
 # debug_directory
+init_test($dbh);
 $sth = $dbh->prepare('SELECT debug_directory FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -50,6 +54,7 @@ else {
 }
 
 # max_code_size
+init_test($dbh);
 $sth = $dbh->prepare('SELECT max_code_size FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -60,6 +65,7 @@ else {
 }
 
 # max_sub_args
+init_test($dbh);
 $sth = $dbh->prepare('SELECT max_sub_args FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -70,6 +76,7 @@ else {
 }
 
 # trusted_code_directory
+init_test($dbh);
 $sth = $dbh->prepare('SELECT trusted_code_directory FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -80,6 +87,7 @@ else {
 }
 
 # tainting
+init_test($dbh);
 $sth = $dbh->prepare('SELECT tainting FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -90,6 +98,7 @@ else {
 }
 
 # ddl_format
+init_test($dbh);
 $sth = $dbh->prepare('SELECT ddl_format FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -100,6 +109,7 @@ else {
 }
 
 # session_namespace
+init_test($dbh);
 $sth = $dbh->prepare('SELECT session_namespace FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -110,6 +120,7 @@ else {
 }
 
 # package_subs
+init_test($dbh);
 $sth = $dbh->prepare('SELECT package_subs FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];
@@ -120,6 +131,7 @@ else {
 }
 
 # reparse_subs
+init_test($dbh);
 $sth = $dbh->prepare('SELECT reparse_subs FROM eptest_perl_config');
 if ($sth && $sth->execute()) {
     my $tmp = ($sth->fetchrow_array)[0];

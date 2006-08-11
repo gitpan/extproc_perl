@@ -1,4 +1,4 @@
-# $Id: testboot.pl,v 1.8 2006/04/07 18:56:16 jeff Exp $
+# $Id: testboot.pl,v 1.9 2006/08/01 17:57:12 jeff Exp $
 
 # test bootstrap file
 
@@ -52,6 +52,13 @@ sub ep_direct_proc_1_in_varchar2
     my $arg = shift;
     ep_debug("arg='$arg'");
     die "expected 'testing 1 2 3', got '$arg'" if ($arg ne 'testing 1 2 3');
+}
+
+sub ep_direct_proc_2_out_varchar2
+{
+    my ($x, $y) = @_;
+    ${$x} = 'testing';
+    ${$y} = '1 2 3';
 }
 
 sub ep_datatype_c

@@ -1,4 +1,4 @@
-# $Id: 30callbacks.t,v 1.1 2006/04/07 17:48:23 jeff Exp $
+# $Id: 30callbacks.t,v 1.2 2006/08/03 16:04:28 jeff Exp $
 
 # test callbacks
 
@@ -11,6 +11,7 @@ my $sth;
 my $tmp;
 
 # query
+init_test($dbh);
 $sth = $dbh->prepare("SELECT TestPerl.func('ep_dbname_via_callback') FROM dual");
 if ($sth && $sth->execute()) {
     $tmp = ($sth->fetchrow_array)[0];
@@ -19,6 +20,7 @@ if ($sth && $sth->execute()) {
 like($tmp, qr/^\Q$ENV{'ORACLE_SID'}\E/i, 'query');
 
 # DML
+init_test($dbh);
 $dbh->do('CREATE TABLE ep_test_table (dummy VARCHAR2(1000))');
 if ($dbh->do("INSERT INTO ep_test_table VALUES('testing 1 2 3')")) {
     $sth = $dbh->prepare('SELECT dummy FROM ep_test_table');

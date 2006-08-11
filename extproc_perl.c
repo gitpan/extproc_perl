@@ -1,4 +1,4 @@
-/* $Id: extproc_perl.c,v 1.42 2006/04/07 19:39:55 jeff Exp $ */
+/* $Id: extproc_perl.c,v 1.44 2006/08/11 13:27:35 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-#define EXTPROC_PERL_VERSION    "2.50"
+#define EXTPROC_PERL_VERSION    "2.51"
 
 /* register termination function */
 #if defined(__SUNPRO_C)
@@ -136,6 +136,8 @@ void ep_debug(EP_CONTEXT *c, char *fmt, ...)
     int n = 0;
     time_t t;
     char *ts;
+
+    dTHX;
 
     va_start(ap, fmt);
     t = time(NULL);
@@ -297,6 +299,8 @@ void ep_fini(void)
 {
     EP_CONTEXT *c = &my_context;
 
+    dTHX;
+
     if (!c->perl) return;
 
     /* call registered extproc_perl destructors -- don't die on error */
@@ -320,6 +324,8 @@ int is_null(void *p)
     char key[80];
     EP_CONTEXT *c = &my_context;
 
+    dTHX;
+
     EP_DEBUGF(c, "IN is_null(%p)", p);
     nullhv = get_hv("ExtProc::_nullhv", TRUE);
     snprintf(key, 80, "%p", p);
@@ -331,6 +337,8 @@ void set_null(void *p)
     HV *nullhv;
     char key[80];
     EP_CONTEXT *c = &my_context;
+
+    dTHX;
 
     EP_DEBUGF(c, "IN set_null(%p)", p);
     nullhv = get_hv("ExtProc::_nullhv", TRUE);
@@ -344,6 +352,8 @@ void clear_null(void *p)
     char key[80];
     EP_CONTEXT *c = &my_context;
 
+    dTHX;
+
     EP_DEBUGF(c, "IN clear_null(%p)", p);
     nullhv = get_hv("ExtProc::_nullhv", TRUE);
     snprintf(key, 80, "%p", p);
@@ -356,6 +366,8 @@ int get_parsed_sub_version(char *name)
     SV **versionsv;
     int version;
     EP_CONTEXT *c = &my_context;
+
+    dTHX;
 
     EP_DEBUGF(c, "IN get_parsed_sub_version(\"%s\")", name);
     versionhv = get_hv("ExtProc::_sub_version", TRUE);
@@ -371,6 +383,8 @@ void set_parsed_sub_version(char *name, int version)
     HV *versionhv;
     SV *versionsv;
     EP_CONTEXT *c = &my_context;
+
+    dTHX;
 
     EP_DEBUGF(c, "IN set_parsed_sub_version(\"%s\", %d)", name, version);
     versionhv = get_hv("ExtProc::_sub_version", TRUE);
@@ -440,6 +454,8 @@ char *parse_code(EP_CONTEXT *c, EP_CODE *code, char *sub)
     char *fqsub;
     int status, version1, version2, reparse;
     SV *codesv;
+
+    dTHX;
 
     EP_DEBUGF(c, "IN parse_code(%p, %p, '%s')", c, code, sub);
 

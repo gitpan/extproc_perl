@@ -1,4 +1,10 @@
-$Id: Changes,v 1.28 2006/04/07 19:56:13 jeff Exp $
+$Id: Changes,v 1.29 2006/08/11 13:27:35 jeff Exp $
+
+2.51	Fri Aug 11 09:26:43 EDT 2006
+	* fix for x86_64 (and probably other 64-bit platforms)
+	* fix bug where only one OUT parameter would be populated when passing
+          multiple OUT parameters
+	* use perl's cccdlflags in compilation
 
 2.50	Fri Apr  7 15:51:15 EDT 2006
 	* new spec parser using Parse::RecDescent

@@ -1,4 +1,4 @@
-/* $Id: wrapper.c,v 1.5 2006/04/07 17:30:35 jeff Exp $ */
+/* $Id: wrapper.c,v 1.8 2006/08/01 17:57:12 jeff Exp $ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,12 +69,12 @@ int ep_call_func_i(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *sig
     for (i = 1; i < strlen(sig); i+=2) {
         char d = sig[i];
         char t = sig[i+1];
-        EP_ARG *arg = &args[i-1];
+        EP_ARG *arg = &args[(i-1)/2];
 
         arg->type = t;
         arg->direction = d;
 
-        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", i, d, t);
+        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", (i+1)/2, d, t);
 
         switch(t) {
             case 'i':
@@ -171,8 +171,8 @@ int ep_call_func_i(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *sig
                         carg = va_arg(ap, char *);
                         arg->val = carg;
                         pind = va_arg(ap, OCIInd *);
-                        plen = va_arg(ap, sb4 *);
-                        pmaxlen = va_arg(ap, sb4 *);
+                        plen = va_arg(ap, STRLEN *);
+                        pmaxlen = va_arg(ap, STRLEN *);
                         if (*pind == OCI_IND_NULL || t == 'O') {
                             sv = sv_2mortal(newSVsv(&PL_sv_undef));
                         }
@@ -218,6 +218,7 @@ int ep_call_func_i(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *sig
                         else {
                             clear_null(darg);
                         }
+                        XPUSHs(sv);
                         break;
                 }
                 break;
@@ -257,6 +258,8 @@ int ep_call_func_i(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *sig
         char *tmp;
         EP_ARG *arg = &args[i];
         if (arg->direction == 'I') continue;
+
+        EP_DEBUGF(c, "-- copying value to arg %d with signature %c%c", i+1, arg->direction, arg->type);
 
         switch(arg->type) {
             case 'c':
@@ -348,12 +351,12 @@ float ep_call_func_r(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
     for (i = 1; i < strlen(sig); i+=2) {
         char d = sig[i];
         char t = sig[i+1];
-        EP_ARG *arg = &args[i-1];
+        EP_ARG *arg = &args[(i-1)/2];
 
         arg->type = t;
         arg->direction = d;
 
-        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", i, d, t);
+        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", (i+1)/2, d, t);
 
         switch(t) {
             case 'i':
@@ -450,8 +453,8 @@ float ep_call_func_r(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
                         carg = va_arg(ap, char *);
                         arg->val = carg;
                         pind = va_arg(ap, OCIInd *);
-                        plen = va_arg(ap, sb4 *);
-                        pmaxlen = va_arg(ap, sb4 *);
+                        plen = va_arg(ap, STRLEN *);
+                        pmaxlen = va_arg(ap, STRLEN *);
                         if (*pind == OCI_IND_NULL || t == 'O') {
                             sv = sv_2mortal(newSVsv(&PL_sv_undef));
                         }
@@ -497,8 +500,8 @@ float ep_call_func_r(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
                         else {
                             clear_null(darg);
                         }
+                        XPUSHs(sv);
                         break;
-                        XPUSHs(sv_isobject(sv) ? sv : newRV_noinc(sv));
                 }
                 break;
             default: break; /* should NEVER get here */
@@ -537,6 +540,8 @@ float ep_call_func_r(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
         char *tmp;
         EP_ARG *arg = &args[i];
         if (arg->direction == 'I') continue;
+
+        EP_DEBUGF(c, "-- copying value to arg %d with signature %c%c", i+1, arg->direction, arg->type);
 
         switch(arg->type) {
             case 'c':
@@ -628,12 +633,12 @@ char *ep_call_func_c(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
     for (i = 1; i < strlen(sig); i+=2) {
         char d = sig[i];
         char t = sig[i+1];
-        EP_ARG *arg = &args[i-1];
+        EP_ARG *arg = &args[(i-1)/2];
 
         arg->type = t;
         arg->direction = d;
 
-        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", i, d, t);
+        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", (i+1)/2, d, t);
 
         switch(t) {
             case 'i':
@@ -730,8 +735,8 @@ char *ep_call_func_c(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
                         carg = va_arg(ap, char *);
                         arg->val = carg;
                         pind = va_arg(ap, OCIInd *);
-                        plen = va_arg(ap, sb4 *);
-                        pmaxlen = va_arg(ap, sb4 *);
+                        plen = va_arg(ap, STRLEN *);
+                        pmaxlen = va_arg(ap, STRLEN *);
                         if (*pind == OCI_IND_NULL || t == 'O') {
                             sv = sv_2mortal(newSVsv(&PL_sv_undef));
                         }
@@ -777,7 +782,7 @@ char *ep_call_func_c(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
                         else {
                             clear_null(darg);
                         }
-                        XPUSHs(sv_isobject(sv) ? sv : newRV_noinc(sv));
+                        XPUSHs(sv);
                         break;
                 }
                 break;
@@ -816,6 +821,8 @@ char *ep_call_func_c(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char *s
     for (i = 0; i < argc; i++) {
         EP_ARG *arg = &args[i];
         if (arg->direction == 'I') continue;
+
+        EP_DEBUGF(c, "-- copying value to arg %d with signature %c%c", i+1, arg->direction, arg->type);
 
         switch(arg->type) {
             case 'c':
@@ -915,12 +922,12 @@ OCIDate *ep_call_func_d(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char
     for (i = 1; i < strlen(sig); i+=2) {
         char d = sig[i];
         char t = sig[i+1];
-        EP_ARG *arg = &args[i-1];
+        EP_ARG *arg = &args[(i-1)/2];
 
         arg->type = t;
         arg->direction = d;
 
-        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", i, d, t);
+        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", (i+1)/2, d, t);
 
         switch(t) {
             case 'i':
@@ -1017,8 +1024,8 @@ OCIDate *ep_call_func_d(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char
                         carg = va_arg(ap, char *);
                         arg->val = carg;
                         pind = va_arg(ap, OCIInd *);
-                        plen = va_arg(ap, sb4 *);
-                        pmaxlen = va_arg(ap, sb4 *);
+                        plen = va_arg(ap, STRLEN *);
+                        pmaxlen = va_arg(ap, STRLEN *);
                         if (*pind == OCI_IND_NULL || t == 'O') {
                             sv = sv_2mortal(newSVsv(&PL_sv_undef));
                         }
@@ -1064,7 +1071,7 @@ OCIDate *ep_call_func_d(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char
                         else {
                             clear_null(darg);
                         }
-                        XPUSHs(sv_isobject(sv) ? sv : newRV_noinc(sv));
+                        XPUSHs(sv);
                         break;
                 }
                 break;
@@ -1103,6 +1110,8 @@ OCIDate *ep_call_func_d(OCIExtProcContext *ctx, OCIInd *ret_ind, char *sub, char
     for (i = 0; i < argc; i++) {
         EP_ARG *arg = &args[i];
         if (arg->direction == 'I') continue;
+
+        EP_DEBUGF(c, "-- copying value to arg %d with signature %c%c", i+1, arg->direction, arg->type);
 
         switch(arg->type) {
             case 'c':
@@ -1203,12 +1212,12 @@ int ep_call_proc(OCIExtProcContext *ctx, char *sub, char *sig, ...)
         float rarg, *prarg;
         char d = sig[i];
         char t = sig[i+1];
-        EP_ARG *arg = &args[i-1];
+        EP_ARG *arg = &args[(i-1)/2];
 
         arg->type = t;
         arg->direction = d;
 
-        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", i, d, t);
+        EP_DEBUGF(c, "-- pushing arg %d, sig=%c%c", (i+1)/2, d, t);
 
         switch(t) {
             case 'i':
@@ -1305,8 +1314,8 @@ int ep_call_proc(OCIExtProcContext *ctx, char *sub, char *sig, ...)
                         carg = va_arg(ap, char *);
                         arg->val = carg;
                         pind = va_arg(ap, OCIInd *);
-                        plen = va_arg(ap, sb4 *);
-                        pmaxlen = va_arg(ap, sb4 *);
+                        plen = va_arg(ap, STRLEN *);
+                        pmaxlen = va_arg(ap, STRLEN *);
                         if (*pind == OCI_IND_NULL || t == 'O') {
                             sv = sv_2mortal(newSVsv(&PL_sv_undef));
                         }
@@ -1352,7 +1361,7 @@ int ep_call_proc(OCIExtProcContext *ctx, char *sub, char *sig, ...)
                         else {
                             clear_null(darg);
                         }
-                        XPUSHs(sv_isobject(sv) ? sv : newRV_noinc(sv));
+                        XPUSHs(sv);
                         break;
                 }
                 break;
@@ -1395,6 +1404,8 @@ int ep_call_proc(OCIExtProcContext *ctx, char *sub, char *sig, ...)
         char *tmp;
         EP_ARG *arg = &args[i];
         if (arg->direction == 'I') continue;
+
+        EP_DEBUGF(c, "-- copying value to arg %d with signature %c%c", i+1, arg->direction, arg->type);
 
         switch(arg->type) {
             case 'c':

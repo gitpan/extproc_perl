@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.39 2006/04/07 19:56:13 jeff Exp $
+# $Id: Makefile.PL,v 1.40 2006/08/11 13:19:52 jeff Exp $
 
 # Makefile generator for extproc_perl
 
@@ -188,6 +188,7 @@ my $CC = $Config{'cc'};
 my $LD = $Config{'ld'};
 my $LDDLFLAGS = $Config{'lddlflags'};
 my $OPT = $Config{'optimize'};
+my $CCCDLFLAGS = $Config{'cccdlflags'};
 my $RFLAG = ($Config{'archname'} =~ /solaris/) ? '-R' : '-Wl,-rpath,';
 
 print "\nGenerating perlxsi.mk...\n";
@@ -201,6 +202,7 @@ MODULES=ExtProc ${mods}
 CC=${CC}
 LD=${LD}
 OPT=${OPT}
+CCCDLFLAGS=${CCCDLFLAGS}
 RFLAG=${RFLAG}
 PERL=${perl}
 ORACLE_HOME=${oracle_home}
@@ -216,7 +218,7 @@ perlxsi.c:
 
 .c.o: extproc_perl.h
 	# need -o argument to keep the path intact from the original source
-	\$(CC) -o \$*.o \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
+	\$(CC) -o \$*.o \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) \$(CCCDLFLAGS) -c \$<
 
 all: libperlxsi.${dlext}
 
@@ -242,6 +244,7 @@ print FILE <<_DONE_;
 CC=${CC}
 LD=${LD}
 OPT=${OPT}
+CCCDLFLAGS=${CCCDLFLAGS}
 RFLAG=${RFLAG}
 PERL=${perl}
 INSTALL=./install-sh
@@ -276,7 +279,7 @@ libExtProc.${dlext}: extproc_perl.h ExtProc/ExtProc.xs
 	cp -f ExtProc/blib/arch/auto/ExtProc/ExtProc.${dlext} libExtProc.${dlext}
 
 .c.o:
-	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) -c \$<
+	\$(CC) \$(CPPFLAGS) `\$(PERL) -MExtUtils::Embed -e ccopts` \$(OPT) \$(CCCDLFLAGS) -c \$<
 
 libperlxsi.${dlext}: \$(XSIOBJS) libExtProc.${dlext}
 	\$(LD) -o \$@ `\$(PERL) -MExtUtils::Embed -e ldopts` ${LDDLFLAGS} \$(XSIOBJS) `\$(PERL) gen_module_libs \${MODULES}` -L. \$(RFLAG)${instpath} -lExtProc
